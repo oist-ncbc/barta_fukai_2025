@@ -125,11 +125,13 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     G_exc.a1 = (exc_alpha*0.25 + 2)*mV  # exc_alpha needs to be supplied to ensure reproducibility
     G_exc.a2 = alpha2*mV
 
-    G_inh.a1 = 3*mV
+    # G_inh.a1 = 3*mV
+    G_inh.a1 = 2*mV
     G_inh.a2 = alpha2*mV
 
     G_exc.gL = 10*nS
-    G_inh.gL = 20*nS
+    G_inh.gL = 10*nS
+    # G_inh.gL = 20*nS
 
     G_exc.v = (np.random.rand(N_exc)*10)*mV + EL
     G_inh.v = (np.random.rand(N_inh)*10)*mV + EL
@@ -221,15 +223,17 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     # Define E<-E plasticity equations
     # ___________________________________
 
+    tauhstas = 10*second
+
     model_ee = '''
             dw/dt = -w/tauhstas : 1 (event-driven)'''
 
     pre_eqs_ee = '''
              ge += w*nS
-             w = clip(w+(x_post)*eta, 0, 100)'''
+             w = clip(w+(x_post)*eta*0.2, 0, 100)'''
 
     post_eqs_ee = '''
-              w = clip(w+x_pre*eta, 0, 100)'''
+              w = clip(w+x_pre*eta*0.2, 0, 100)'''
     # ___________________________________
 
 
@@ -395,15 +399,16 @@ def update_matrix(Z, N_exc, delays, weights, plast_ie):
     delays_ei = delays_ei[mask]
 
     # exc to inh
-    warr = np.array(weights['ie'])
+    if plast_ie:
+        warr = np.array(weights['ie'])
 
-    cutout_ie = Z_trained[N_exc:,:N_exc].T
-    indices = cutout_ie.nonzero()
-    cutout_ie[indices[0],indices[1]] = warr
+        cutout_ie = Z_trained[N_exc:,:N_exc].T
+        indices = cutout_ie.nonzero()
+        cutout_ie[indices[0],indices[1]] = warr
 
-    mask = (warr != 0)
+        mask = (warr != 0)
 
-    delays_ie = delays_ie[mask]
+        delays_ie = delays_ie[mask]
 
     delays_trained = delays_ee, delays_ie, delays_ii, delays_ei
 
