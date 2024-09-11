@@ -16,7 +16,7 @@ def get_stim_matrix(stimuli, N_exc, simulation_time, dt=0.1):
     return stim_matrix
 
 def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisson, poisson_amplitude,
-                simulation_time, learning_rate, report=True, state_variables=None, state_subset=0.1,
+                simulation_time, learning_rate, plast_ie=False, plast_ee=False, report=True, state_variables=None, state_subset=0.1,
                 stimuli=None, N_exc=8000, alpha2=2, reset_potential=False, target_rate_std=0, target_distr='lognorm',
                 seed_num=42):
     """
@@ -32,6 +32,8 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     :param poisson_amplitude: amplitude of background input spikes in nS
     :param simulation_time: total simulation time in seconds
     :param learning_rate: inhibitory plasticity learning rate
+    :param plast_ie: if exc to inh plasticity should be turned on
+    :param plast_ee: if exc to exc plasticity should be turned on
     :param report: whether progress should be printed out during simulation
     :param state_variables: either None (default), or a list of variables that should be recorded
     :param state_subset: if float, given fraction of neurons is selected by random.
@@ -172,8 +174,8 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     Sre.w = (second/tau_rate) / N_exc
     # _________________________
 
-    # Define plasticity equations
-    # ___________________________
+    # Define E<-I plasticity equations
+    # ___________________________________
 
     eta = learning_rate
 
@@ -200,14 +202,50 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
         post_eqs_inh = None
     else:
         raise ValueError(f"plasticity can be 'rate', 'hebb', or 'idip'. Received '{plasticity}' instead.")
-    # ___________________________
+
+    # ___________________________________
+
+    # Define I<-E plasticity equations
+    # ___________________________________
+
+    pre_eqs_ie = '''
+             ge += w*nS
+             w = clip(w-(x_post)*eta, 0, 100)'''
+
+    post_eqs_ie = '''
+              w = clip(w+x_pre*eta, 0, 100)'''
+    # ___________________________________
+
+    # ___________________________________
+
+    # Define E<-E plasticity equations
+    # ___________________________________
+
+    model_ee = '''
+            dw/dt = -w/tauhstas : 1 (event-driven)'''
+
+    pre_eqs_ee = '''
+             ge += w*nS
+             w = clip(w+(x_post)*eta, 0, 100)'''
+
+    post_eqs_ee = '''
+              w = clip(w+x_pre*eta, 0, 100)'''
+    # ___________________________________
 
 
     # Initiate synapses
     # _________________________
-    See = Synapses(G_exc, G_exc, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
     Sii = Synapses(G_inh, G_inh, model='w : 1', on_pre='gi += w*nS', method='exponential_euler')
-    Sie = Synapses(G_exc, G_inh, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
+
+    if plast_ee and learning_rate > 0:
+        See = Synapses(G_exc, G_exc, model=model_ee, on_pre=pre_eqs_ee, on_post=post_eqs_ee, method='exponential_euler')
+    else:
+        See = Synapses(G_exc, G_exc, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
+
+    if plast_ie and learning_rate > 0:
+        Sie = Synapses(G_exc, G_inh, model='w : 1', on_pre=pre_eqs_ie, on_post=post_eqs_ie, method='exponential_euler')
+    else:
+        Sie = Synapses(G_exc, G_inh, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
 
     # only employ plasticity if learning is turned on
     model = '''
@@ -311,7 +349,11 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
         }
     }
 
-    results['weights'] = np.array(Sei.w)
+    results['weights'] = {}
+    results['weights']['ei'] = np.array(Sei.w)
+
+    if plast_ie:
+        results['weights']['ie'] = np.array(Sie.w)
 
     if target_rate_std != 0:
         results['target_rates'] = target_rates
@@ -322,7 +364,8 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
         'ge': nS,
         'gi': nS,
         'y': 1,
-        'theta': mV
+        'theta': mV,
+        'x': 1
     }
 
     if state_variables is not None:
@@ -335,12 +378,13 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
 
     return results
 
-def update_matrix(Z, N_exc, delays, weights):
+def update_matrix(Z, N_exc, delays, weights, plast_ie):
     Z_trained = np.copy(Z)
 
     delays_ee, delays_ie, delays_ii, delays_ei = delays
 
-    warr = np.array(weights)
+    # inh to exc
+    warr = np.array(weights['ei'])
 
     cutout_ei = Z_trained[:N_exc,N_exc:].T
     indices = cutout_ei.nonzero()
@@ -349,6 +393,17 @@ def update_matrix(Z, N_exc, delays, weights):
     mask = (warr != 0)
 
     delays_ei = delays_ei[mask]
+
+    # exc to inh
+    warr = np.array(weights['ie'])
+
+    cutout_ie = Z_trained[N_exc:,:N_exc].T
+    indices = cutout_ie.nonzero()
+    cutout_ie[indices[0],indices[1]] = warr
+
+    mask = (warr != 0)
+
+    delays_ie = delays_ie[mask]
 
     delays_trained = delays_ee, delays_ie, delays_ii, delays_ei
 
@@ -363,9 +418,9 @@ def run_n_save(simulation_params, args, matrix_file):
     with open(matrix_file, 'rb') as file:
         Z, N_exc, patterns, exc_alpha, delays, _ = pickle.load(file)
 
-    Z_new, delays_new = update_matrix(Z, N_exc, delays, results['weights'])
-
     if args.matrix is not None:
+        Z_new, delays_new = update_matrix(Z, N_exc, delays, results['weights'], plast_ie=simulation_params['plast_ie'])
+
         with open(args.matrix, 'wb') as file:
             savetuple = (Z_new, N_exc, patterns, exc_alpha, delays_new, vars(args))
             pickle.dump(savetuple, file)
@@ -385,6 +440,7 @@ if __name__ == '__main__':
     parser.add_argument('--trdistr', type=str, default='lognorm')
     parser.add_argument('--eta', type=float, default=1e-3)
     parser.add_argument('--plasticity', type=str, default='hebb')
+    parser.add_argument('--eiplast', action='store_true')
     parser.add_argument('--bcg_rate', type=float, default=2.)
     parser.add_argument('--bcg_ampl', type=float, default=0.3)
     parser.add_argument('-o', '--output', type=str)
@@ -416,7 +472,8 @@ if __name__ == '__main__':
         N_exc=N_exc,
         target_rate_std=args.trstd,
         target_distr=args.trdistr,
-        state_variables=args.record
+        state_variables=args.record,
+        plast_ie=args.eiplast
     )
 
     run_n_save(simulation_params, args, matrix_file=args.input)
