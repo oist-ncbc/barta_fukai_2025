@@ -1,0 +1,14 @@
+nexc: 8000
+ninh: 2000
+ee:
+  prob: 0.05
+  strength: 0.5
+ei:
+  prob: 0.3
+  strength: 0.5
+ie:
+  prob: 0.3
+  strength: 0.5
+ii:
+  prob: 0.3
+  strength: 0.5
