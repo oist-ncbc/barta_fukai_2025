@@ -223,17 +223,17 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     # Define E<-E plasticity equations
     # ___________________________________
 
-    tauhstas = 10*second
+    tauhstas = 400*second
 
     model_ee = '''
             dw/dt = -w/tauhstas : 1 (event-driven)'''
 
     pre_eqs_ee = '''
              ge += w*nS
-             w = clip(w+(x_post)*eta*0.2, 0, 100)'''
+             w = clip(w+(x_post)*eta, 0, 100)'''
 
     post_eqs_ee = '''
-              w = clip(w+x_pre*eta*0.2, 0, 100)'''
+              w = clip(w+x_pre*eta, 0, 100)'''
     # ___________________________________
 
 
@@ -359,6 +359,9 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     if plast_ie:
         results['weights']['ie'] = np.array(Sie.w)
 
+    if plast_ee:
+        results['weights']['ee'] = np.array(See.w)
+
     if target_rate_std != 0:
         results['target_rates'] = target_rates
 
@@ -382,7 +385,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
 
     return results
 
-def update_matrix(Z, N_exc, delays, weights, plast_ie):
+def update_matrix(Z, N_exc, delays, weights, plast_ie, plast_ee):
     Z_trained = np.copy(Z)
 
     delays_ee, delays_ie, delays_ii, delays_ei = delays
@@ -410,6 +413,18 @@ def update_matrix(Z, N_exc, delays, weights, plast_ie):
 
         delays_ie = delays_ie[mask]
 
+    # exc to exc
+    if plast_ee:
+        warr = np.array(weights['ee'])
+
+        cutout_ee = Z_trained[:N_exc,:N_exc].T
+        indices = cutout_ee.nonzero()
+        cutout_ee[indices[0],indices[1]] = warr
+
+        mask = (warr != 0)
+
+        delays_ee = delays_ee[mask]
+
     delays_trained = delays_ee, delays_ie, delays_ii, delays_ei
 
     return Z_trained, delays_trained
@@ -424,7 +439,9 @@ def run_n_save(simulation_params, args, matrix_file):
         Z, N_exc, patterns, exc_alpha, delays, _ = pickle.load(file)
 
     if args.matrix is not None:
-        Z_new, delays_new = update_matrix(Z, N_exc, delays, results['weights'], plast_ie=simulation_params['plast_ie'])
+        Z_new, delays_new = update_matrix(Z, N_exc, delays, results['weights'],
+                                          plast_ie=simulation_params['plast_ie'],
+                                          plast_ee=simulation_params['plast_ee'])
 
         with open(args.matrix, 'wb') as file:
             savetuple = (Z_new, N_exc, patterns, exc_alpha, delays_new, vars(args))
@@ -446,6 +463,7 @@ if __name__ == '__main__':
     parser.add_argument('--eta', type=float, default=1e-3)
     parser.add_argument('--plasticity', type=str, default='hebb')
     parser.add_argument('--eiplast', action='store_true')
+    parser.add_argument('--eeplast', action='store_true')
     parser.add_argument('--bcg_rate', type=float, default=2.)
     parser.add_argument('--bcg_ampl', type=float, default=0.3)
     parser.add_argument('-o', '--output', type=str)
@@ -478,7 +496,8 @@ if __name__ == '__main__':
         target_rate_std=args.trstd,
         target_distr=args.trdistr,
         state_variables=args.record,
-        plast_ie=args.eiplast
+        plast_ie=args.eiplast,
+        plast_ee=args.eeplast
     )
 
     run_n_save(simulation_params, args, matrix_file=args.input)
