@@ -5,7 +5,7 @@ import argparse
 import pickle
 
 
-def genconn(N, N_exc, P, f, sparsity, circular=False, rescale=True, seed=42):
+def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True, var_factor=1, seed=42):
     """
     Generate connectivity matrix by calculating Hebbian terms in EE connectivity, selecting the highest ones
     and overlaying lognormal weight distribution.
@@ -60,7 +60,7 @@ def genconn(N, N_exc, P, f, sparsity, circular=False, rescale=True, seed=42):
     weights_ee = (Z[:N_exc,:N_exc][Z[:N_exc,:N_exc] != 0])
 
     E = 0.5
-    Var = E
+    Var = E*var_factor
 
     sig = np.sqrt(np.log(Var/(E*E) + 1))
     mu = np.log(E) - sig**2 / 2
@@ -77,7 +77,7 @@ def genconn(N, N_exc, P, f, sparsity, circular=False, rescale=True, seed=42):
 
     for slice, sp_val in zip(slices, [sparse_ie, sparse_ii, sparse_ei]):
         Z_slice = Z[slice[0]:slice[1],slice[2]:slice[3]]
-        Z[slice[0]:slice[1],slice[2]:slice[3]] = (np.random.rand(*Z_slice.shape) < sp_val).astype(float) * E
+        Z[slice[0]:slice[1],slice[2]:slice[3]] = (np.random.rand(*Z_slice.shape) < sp_val).astype(float) * E * i_factor
 
     if rescale:
         pattern_participation = patterns.sum(axis=0)
@@ -85,6 +85,10 @@ def genconn(N, N_exc, P, f, sparsity, circular=False, rescale=True, seed=42):
         for ii in range(N_exc):
             factor = np.exp((pattern_participation[ii] - P*f) / P*f)
             Z[:,ii] = Z[:,ii] / factor
+
+    # if rescale:
+    #     for i in tqdm(range(N_exc)):
+    #         Z[i,:8000] = Z[i,:8000] / Z[i,:8000].sum()
 
     return Z, patterns
 
@@ -120,7 +124,9 @@ if __name__ == '__main__':
     parser.add_argument('--circular', action='store_true')
     parser.add_argument('--ee_sparse', type=float, default=0.05)
     parser.add_argument('--i_sparse', type=float, default=0.3)
+    parser.add_argument('--i_factor', type=float, default=1)
     parser.add_argument('-o', '--output', type=str, default='')
+    parser.add_argument('--var', type=float, default=1)
 
     args = parser.parse_args()
 
@@ -129,7 +135,8 @@ if __name__ == '__main__':
     network_sparsity = (args.ee_sparse, args.i_sparse, args.i_sparse, args.i_sparse)
 
     Z, patterns = genconn(N=args.neurons, N_exc=N_exc, P=args.patterns, f=args.pattern_sparsity,
-                sparsity=network_sparsity, circular=args.circular, seed=args.seed)
+                sparsity=network_sparsity, circular=args.circular, seed=args.seed, i_factor=args.i_factor,
+                          var_factor=args.var)
 
     delays_tuple, exc_alpha = get_aux_prop(Z)
 

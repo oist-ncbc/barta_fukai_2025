@@ -4,11 +4,11 @@ ee:
   prob: 0.05
   strength: 0.5
 ei:
-  prob: 0.3
+  prob: 0.1
   strength: 0.5
 ie:
-  prob: 0.3
+  prob: 0.1
   strength: 0.5
 ii:
-  prob: 0.3
+  prob: 0.1
   strength: 0.5

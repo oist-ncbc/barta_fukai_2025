@@ -2,6 +2,7 @@ from brian2 import *
 import numpy as np
 import argparse
 import pickle
+import pandas as pd
 
 def get_stim_matrix(stimuli, N_exc, simulation_time, dt=0.1):
     time_arr = np.arange(0, simulation_time+1e-5, dt)
@@ -27,7 +28,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     :param target_rate: can be either scalar for all neurons, or an array of length N_exc
     :param plasticity: if 'hebb', Hebbian learning is used. if 'rate', heterosynaptic learning rule is used
         to achieve the desired firing rate. if 'idip', learning rule to equalize mean excitatory input to a neuron
-        is used
+        is used. if 'threshold', the threshold of each neuron is modified until desired firing rate is achieved
     :param background_poisson: background input rate in kHz. received by both excitatory and inhibitory populations
     :param poisson_amplitude: amplitude of background input spikes in nS
     :param simulation_time: total simulation time in seconds
@@ -72,6 +73,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
 
     tau_stdp = 20*ms  # STDP time constant
     tidip = 160*ms
+    tau_rate = 10*second  # set very long rate integration for smooth rate estimate
     # ________________________
 
     # Neural model equations
@@ -87,9 +89,13 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     
     dy/dt = (-y + ge/nS)/tidip : 1
     
+    dz/dt = -z/tau_rate : 1
+    
+    basethr : volt
+    
     dH1/dt = -H1/tau_th1 : volt
     dH2/dt = -H2/tau_th2 : volt
-    theta = omega + H1 + H2 : volt
+    theta = basethr + H1 + H2 : volt
     
     a1 : volt
     a2 : volt
@@ -114,12 +120,20 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
         x += 1
         '''
 
+    if plasticity == 'threshold':
+        reset_exc = reset + '''
+        basethr = basethr + learning_rate*(z-target_rate)*mV
+        z += second/tau_rate
+        '''
+    else:
+        reset_exc = reset
+
     # Initiate neurons
     # ________________
 
     eqs = Equations(eqs_str)
 
-    G_exc = NeuronGroup(N_exc, eqs, threshold='v > theta', reset=reset, method='exponential_euler', refractory=refrac)
+    G_exc = NeuronGroup(N_exc, eqs, threshold='v > theta', reset=reset_exc, method='exponential_euler', refractory=refrac)
     G_inh = NeuronGroup(N_inh, eqs, threshold='v > theta', reset=reset, method='exponential_euler', refractory=refrac)
 
     G_exc.a1 = (exc_alpha*0.25 + 2)*mV  # exc_alpha needs to be supplied to ensure reproducibility
@@ -135,6 +149,10 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
 
     G_exc.v = (np.random.rand(N_exc)*10)*mV + EL
     G_inh.v = (np.random.rand(N_inh)*10)*mV + EL
+
+    G_exc.z = target_rate
+    G_exc.basethr = omega
+    G_inh.basethr = omega
     # ________________
 
     # Initiate background input
@@ -147,12 +165,12 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     # ___________________________
 
     if stimuli is not None:
-        rm = get_stim_matrix(stimuli, N_exc, simulation_time) * background_poisson
-        ta = TimedArray(rm*kHz, dt=0.1*second)
-        G_ext = PoissonGroup(N_exc, rates='ta(t)')
+        rm = get_stim_matrix(stimuli, N_exc, simulation_time) * background_poisson * 5
+        ta = TimedArray(rm.T*kHz, dt=0.1*second)
+        G_ext = PoissonGroup(N_exc, rates='ta(t,i)')
         Syn_ext = Synapses(G_ext, G_exc, model='w : 1', on_pre='ge += w*nS')
         Syn_ext.connect(i='j')
-        Syn_ext.w = poisson_amplitude*nS
+        Syn_ext.w = poisson_amplitude
 
     # ___________________________
 
@@ -160,7 +178,6 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     # _________________________
     # In order to use heterosynaptic plasticity, a dummy unit is created, receiving input from all neurons
     # and integrating it as a rate. The rate is then passed on the neurons through "gap junctions".
-    tau_rate = 10*second  # set very long rate integration for smooth rate estimate
 
     eqs_rate_mon = '''
         dr/dt = -r/tau_rate : 1
@@ -202,8 +219,13 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
                  gi += w*nS
                  w = clip(w+(y_pre-27)*eta, 0, 100)'''
         post_eqs_inh = None
+    elif plasticity == 'threshold':
+        pre_eqs_inh = '''
+                gi += w*nS
+        '''
+        post_eqs_inh = None
     else:
-        raise ValueError(f"plasticity can be 'rate', 'hebb', or 'idip'. Received '{plasticity}' instead.")
+        raise ValueError(f"plasticity can be 'threshold', 'rate', 'hebb', or 'idip'. Received '{plasticity}' instead.")
 
     # ___________________________________
 
@@ -223,7 +245,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     # Define E<-E plasticity equations
     # ___________________________________
 
-    tauhstas = 400*second
+    tauhstas = 450*second
 
     model_ee = '''
             dw/dt = -w/tauhstas : 1 (event-driven)'''
@@ -450,6 +472,20 @@ def run_n_save(simulation_params, args, matrix_file):
     with open(args.output, 'wb') as file:
         pickle.dump(results, file)
 
+def load_stim_file(filename, patterns, randstim):
+    stims = pd.read_csv(filename, header=None, index_col=False).values
+
+    if not randstim:
+        tuples = [(x[0], x[1], np.argwhere(patterns[int(x[2])]).flatten()[:20]) for x in stims]
+    else:
+        tuples = []
+        for x in stims:
+            # patlen = len(patterns[int(x[2])])
+            randix = np.random.permutation(8000)[:20]
+            tuples = [(x[0], x[1], randix)]
+
+    return tuples
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -468,7 +504,11 @@ if __name__ == '__main__':
     parser.add_argument('--bcg_ampl', type=float, default=0.3)
     parser.add_argument('-o', '--output', type=str)
     parser.add_argument('--matrix', type=str)
+    parser.add_argument('--reset', action='store_true')
+    parser.add_argument('--alpha2', type=float, default=2)
     parser.add_argument('--record', type=str, nargs='*')
+    parser.add_argument('--stimulus', type=str)
+    parser.add_argument('--randstim', action='store_true')
 
     args = parser.parse_args()
 
@@ -481,6 +521,11 @@ if __name__ == '__main__':
             target_rate = np.array(rates)
     else:
         target_rate = args.target_rate
+
+    if args.stimulus is not None:
+        stimulus_tuples = load_stim_file(args.stimulus, patterns, randstim=args.randstim)
+    else:
+        stimulus_tuples = None
 
     simulation_params = dict(
         Z=Z,
@@ -497,7 +542,10 @@ if __name__ == '__main__':
         target_distr=args.trdistr,
         state_variables=args.record,
         plast_ie=args.eiplast,
-        plast_ee=args.eeplast
+        plast_ee=args.eeplast,
+        reset_potential=args.reset,
+        alpha2=args.alpha2,
+        stimuli=stimulus_tuples
     )
 
     run_n_save(simulation_params, args, matrix_file=args.input)
