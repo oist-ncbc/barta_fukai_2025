@@ -132,7 +132,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
 
     if plasticity == 'threshold':
         reset_exc = reset + '''
-        basethr = basethr + clip(learning_rate*(z-target_rate), 0, 1)*mV
+        basethr = basethr + learning_rate*(z-target_rate)*mV
         z += second/tau_rate
         '''
     else:
