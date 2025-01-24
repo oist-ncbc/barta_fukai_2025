@@ -55,6 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--results', type=str, nargs='+')
     parser.add_argument('-f', '--force', action='store_true')
     parser.add_argument('-t', '--max_time', type=float)
+    parser.add_argument('--dt', type=float, default=0.1)
     parser.add_argument('--img', type=str)
 
     args = parser.parse_args()
@@ -71,6 +72,7 @@ if __name__ == '__main__':
             Z, N_exc, patterns, exc_alpha, delays, params = pickle.load(file)
 
         ix, t = results['spikes']['exc']
+        ix_inh, t_inh = results['spikes']['inh']
 
         if args.max_time is None:
             max_time = results['params']['time']
@@ -78,11 +80,16 @@ if __name__ == '__main__':
             max_time = args.max_time
 
         if args.force or 'analysis' not in results.keys():
-            _count_times, spike_counts = get_spike_counts(t, ix, max_time)
+            _count_times, spike_counts = get_spike_counts(t, ix, max_time, dt=args.dt)
             count_times = _count_times[:-1]
             results['analysis'] = {}
             results['analysis']['t'] = count_times
             results['analysis']['spike_counts'] = spike_counts
+
+            _count_times_inh, spike_counts_inh = get_spike_counts(t_inh, ix_inh, max_time, dt=args.dt, N=2000)
+            count_times_inh = _count_times_inh[:-1]
+            results['analysis']['t_inh'] = count_times_inh
+            results['analysis']['spike_counts_inh'] = spike_counts_inh
 
             activations = get_pattern_activations(spike_counts, patterns)
             correlations = get_correlations(patterns, spike_counts)

@@ -5,7 +5,8 @@ import argparse
 import pickle
 
 
-def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True, var_factor=1, seed=42):
+def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True,
+            var_factor=1, fix_size=False, spread=0, seed=42):
     """
     Generate connectivity matrix by calculating Hebbian terms in EE connectivity, selecting the highest ones
     and overlaying lognormal weight distribution.
@@ -22,15 +23,27 @@ def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True, va
     """
     np.random.seed(seed)
 
-    patterns = (np.random.rand(P, N_exc) < f).astype(float)
+    if not fix_size:
+        patterns = (np.random.rand(P, N_exc) < f).astype(float)
+    else:
+        patterns = []
+        pat_len = int(N_exc * f)
+
+        for ii in range(P):
+            pattern = np.random.permutation(np.concatenate([np.ones(pat_len), np.zeros(N_exc-pat_len)]))
+            patterns.append(pattern)
+
+        patterns = np.array(patterns)
 
     Z0 = np.zeros((N,N))
 
-    for pattern in tqdm(patterns):
+    spread_arr = np.linspace(-1, 1, len(patterns)) * spread + 1
+
+    for pattern, q in tqdm(zip(patterns, spread_arr), total=len(patterns)):
         pairs = np.array(list(combinations(np.argwhere(pattern).flatten(), 2)))
         x, y = pairs.T
-        Z0[x,y] += 1
-        Z0[y,x] += 1
+        Z0[x,y] += 1 * q
+        Z0[y,x] += 1 * q
 
     if circular:
         for pattern1, pattern2 in tqdm(zip(patterns, np.roll(patterns, shift=1, axis=0)), total=len(patterns)):
@@ -122,11 +135,13 @@ if __name__ == '__main__':
     parser.add_argument('--pattern_sparsity', type=float, default=0.01)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--circular', action='store_true')
+    parser.add_argument('--fix_size', action='store_true')
     parser.add_argument('--ee_sparse', type=float, default=0.05)
     parser.add_argument('--i_sparse', type=float, default=0.3)
     parser.add_argument('--i_factor', type=float, default=1)
     parser.add_argument('-o', '--output', type=str, default='')
     parser.add_argument('--var', type=float, default=1)
+    parser.add_argument('--spread', type=float, default=0)
 
     args = parser.parse_args()
 
@@ -136,7 +151,7 @@ if __name__ == '__main__':
 
     Z, patterns = genconn(N=args.neurons, N_exc=N_exc, P=args.patterns, f=args.pattern_sparsity,
                 sparsity=network_sparsity, circular=args.circular, seed=args.seed, i_factor=args.i_factor,
-                          var_factor=args.var)
+                          var_factor=args.var, fix_size=args.fix_size, spread=args.spread)
 
     delays_tuple, exc_alpha = get_aux_prop(Z)
 

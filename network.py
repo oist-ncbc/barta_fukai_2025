@@ -18,8 +18,8 @@ def get_stim_matrix(stimuli, N_exc, simulation_time, dt=0.1):
 
 def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisson, poisson_amplitude,
                 simulation_time, learning_rate, plast_ie=False, plast_ee=False, report=True, state_variables=None, state_subset=0.1,
-                stimuli=None, N_exc=8000, alpha2=2, reset_potential=False, target_rate_std=0, target_distr='lognorm',
-                seed_num=42):
+                stimuli=None, N_exc=8000, alpha1=True, alpha2=2, reset_potential=False, target_rate_std=0, target_distr='lognorm',
+                thresholds=None, seed_num=42, tau_stdp_ms=20, meta_eta=0, chunks=None):
     """
     Run network of neurons with or without inhibitory plasticity.
     :param Z: connection matrix with weights in nS
@@ -47,6 +47,9 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
         target rate assigned from a log-normal distribution
     :param target_distr: 'lognorm' or 'gamma' supported for distribution of firing rates
     :param seed_num: seed for reproducibility
+    :param alpha1: whether short timescale adaptation should be used
+    :param chunks: duration of chunks in seconds in which network is simulated. If None (default), network is simulated
+        in one go
     """
     np.random.seed(seed_num)
 
@@ -71,7 +74,9 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     Ee = 0*mV    # excitatory reversal potential
     Ei = -80*mV  # inhibitory reversal potential
 
-    tau_stdp = 20*ms  # STDP time constant
+    tau_stdp = tau_stdp_ms*ms  # STDP time constant
+    tau_bdec = 100*ms
+    tau_bmon = 20*second
     tidip = 160*ms
     tau_rate = 10*second  # set very long rate integration for smooth rate estimate
     # ________________________
@@ -83,6 +88,8 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     Isyn = -(ge)*(v-Ee)-(gi)*(v-Ei) : amp
     
     dx/dt = -x/tau_stdp : 1
+    db_dec/dt = -b_dec/tau_bdec : 1
+    db_mon/dt = -b_mon/tau_bmon : 1
     
     dge/dt = -ge/taue : siemens
     dgi/dt = -gi/taui : siemens
@@ -101,6 +108,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     a2 : volt
     gL : siemens
     network_rate : 1
+    neuron_target_rate : 1
     '''
 
 
@@ -110,6 +118,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
         reset = '''
         H1 += a1
         H2 += a2
+        b_dec += 1
         x += 1
         v = EL
         '''
@@ -117,12 +126,13 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
         reset = '''
         H1 += a1
         H2 += a2
+        b_dec += 1
         x += 1
         '''
 
     if plasticity == 'threshold':
         reset_exc = reset + '''
-        basethr = basethr + learning_rate*(z-target_rate)*mV
+        basethr = basethr + clip(learning_rate*(z-target_rate), 0, 1)*mV
         z += second/tau_rate
         '''
     else:
@@ -133,14 +143,30 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
 
     eqs = Equations(eqs_str)
 
-    G_exc = NeuronGroup(N_exc, eqs, threshold='v > theta', reset=reset_exc, method='exponential_euler', refractory=refrac)
+    G_exc = NeuronGroup(N_exc, eqs, threshold='v > theta', reset=reset_exc, method='exponential_euler', refractory=refrac,
+                        events={'burst': 'b_dec > 3'})
     G_inh = NeuronGroup(N_inh, eqs, threshold='v > theta', reset=reset, method='exponential_euler', refractory=refrac)
 
-    G_exc.a1 = (exc_alpha*0.25 + 2)*mV  # exc_alpha needs to be supplied to ensure reproducibility
+    G_exc.neuron_target_rate = target_rate
+
+    target_b_mon = 0.1*Hz*tau_bmon*2
+
+    G_exc.run_on_event('burst', """
+        b_dec =  0
+        b_mon += 1
+        neuron_target_rate = clip(neuron_target_rate+(target_b_mon - b_mon)*meta_eta, 0, 100)
+    """)
+
+    if alpha1 is True:
+        G_exc.a1 = (exc_alpha*0.25 + 2)*mV  # exc_alpha needs to be supplied to ensure reproducibility
+        G_inh.a1 = 2*mV
+    else:
+        G_exc.a1 = 0
+        G_inh.a1 = 0
+
     G_exc.a2 = alpha2*mV
 
     # G_inh.a1 = 3*mV
-    G_inh.a1 = 2*mV
     G_inh.a2 = alpha2*mV
 
     G_exc.gL = 10*nS
@@ -151,7 +177,12 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     G_inh.v = (np.random.rand(N_inh)*10)*mV + EL
 
     G_exc.z = target_rate
-    G_exc.basethr = omega
+
+    if thresholds is None:
+        G_exc.basethr = omega
+    else:
+        G_exc.basethr = thresholds*mV
+
     G_inh.basethr = omega
     # ________________
 
@@ -165,8 +196,9 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     # ___________________________
 
     if stimuli is not None:
-        rm = get_stim_matrix(stimuli, N_exc, simulation_time) * background_poisson * 5
-        ta = TimedArray(rm.T*kHz, dt=0.1*second)
+        stim_dt = 0.1
+        rm = get_stim_matrix(stimuli, N_exc, simulation_time, dt=stim_dt) * 10
+        ta = TimedArray(rm.T*kHz, dt=stim_dt*second)
         G_ext = PoissonGroup(N_exc, rates='ta(t,i)')
         Syn_ext = Synapses(G_ext, G_exc, model='w : 1', on_pre='ge += w*nS')
         Syn_ext.connect(i='j')
@@ -209,6 +241,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     elif plasticity == 'hebb':
         pre_eqs_inh = '''
                  gi += w*nS
+                 alpha = neuron_target_rate_post*Hz*tau_stdp*2
                  w = clip(w+(x_post-alpha)*eta, 0, 100)'''
 
         post_eqs_inh = '''
@@ -217,7 +250,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     elif plasticity == 'idip':
         pre_eqs_inh = '''
                  gi += w*nS
-                 w = clip(w+(y_pre-27)*eta, 0, 100)'''
+                 w = clip(w+(y_pre-17)*eta, 0, 100)'''
         post_eqs_inh = None
     elif plasticity == 'threshold':
         pre_eqs_inh = '''
@@ -332,7 +365,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
         alpha_val = target_rates*Hz*tau_stdp*2
 
     alpha_matrix = (ZEI != 0).astype(float) * alpha_val
-    Sei.alpha = alpha_matrix[ZEI != 0]
+    Sei.alpha = alpha_matrix[ZEI != 0]  # is this necessary?
 
     # inh to inh
     ZII = Z[N_exc:,N_exc:].T
@@ -347,45 +380,8 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
 
     net = Network(collect())
 
-    spike_monitors = [SpikeMonitor(G_exc), SpikeMonitor(G_inh)]
-    net.add(spike_monitors)
-
-    if state_variables is not None:
-        # define subset of neurons with state being recorded
-        if type(state_subset) == float:
-            n_state = int(state_subset * N_exc)
-            subset_ix = np.random.permutation(N_exc)[:n_state]
-
-        state_monitors = [StateMonitor(G_exc[:100], state_variables, record=True)]
-        net.add(state_monitors)
-
-    if report:
-        report_status = 'stderr'
-    else:
-        report_status = None
-
-    net.run(simulation_time*second, report=report_status)
-
-    # __________________________
-
-    results = {
-        'spikes': {
-            'exc': (np.array(spike_monitors[0].i), np.array(spike_monitors[0].t / second)),
-            'inh': (np.array(spike_monitors[1].i), np.array(spike_monitors[1].t / second))
-        }
-    }
-
-    results['weights'] = {}
-    results['weights']['ei'] = np.array(Sei.w)
-
-    if plast_ie:
-        results['weights']['ie'] = np.array(Sie.w)
-
-    if plast_ee:
-        results['weights']['ee'] = np.array(See.w)
-
-    if target_rate_std != 0:
-        results['target_rates'] = target_rates
+    chunks = None
+    folder = 'data/'
 
     default_units = {
         'v': mV,
@@ -394,18 +390,142 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
         'gi': nS,
         'y': 1,
         'theta': mV,
-        'x': 1
+        'x': 1,
+        'b_dec': 1,
+        'b_mon': 1
     }
 
-    if state_variables is not None:
-        results['state'] = {}
+    if chunks is None:
+        spike_monitors = [SpikeMonitor(G_exc), SpikeMonitor(G_inh)]
+        net.add(spike_monitors)
 
-        # import pdb;pdb.set_trace()
+        if state_variables is not None:
+            print(state_variables)
+            # define subset of neurons with state being recorded
+            if type(state_subset) == float:
+                n_state = int(state_subset * N_exc)
+                subset_ix = np.random.permutation(N_exc)[:n_state]
 
-        for variable in state_variables:
-            results['state'][variable] = np.array(state_monitors[0].get_states(variable)[variable] / default_units[variable])
+            state_monitors = [StateMonitor(G_exc[:], state_variables, record=True), StateMonitor(G_inh[:], state_variables, record=True)]
+            net.add(state_monitors)
 
-    return results
+        if report:
+            report_status = 'stderr'
+        else:
+            report_status = None
+
+        net.run(simulation_time*second, report=report_status)
+
+        # __________________________
+
+        results = {'spikes': {
+            'exc': (np.array(spike_monitors[0].i), np.array(spike_monitors[0].t / second)),
+            'inh': (np.array(spike_monitors[1].i), np.array(spike_monitors[1].t / second))
+        }, 'weights': {}}
+
+        results['weights']['ei'] = np.array(Sei.w)
+
+        if plast_ie:
+            results['weights']['ie'] = np.array(Sie.w)
+
+        if plast_ee:
+            results['weights']['ee'] = np.array(See.w)
+
+        if target_rate_std != 0:
+            results['target_rates'] = target_rates
+
+        if meta_eta > 0:
+            results['target_rates'] = np.array(G_exc.neuron_target_rate)
+
+        if plasticity == 'threshold':
+            results['thresholds'] = np.array(G_exc.basethr / mV)
+
+        if state_variables is not None:
+            results['state_exc'] = {}
+            results['state_inh'] = {}
+
+            # import pdb;pdb.set_trace()
+
+            for variable in state_variables:
+                for i, ei in enumerate(['exc','inh']):
+                    variable_full_data = np.array(state_monitors[i].get_states([variable])[variable] / default_units[variable])
+                    print(variable_full_data.shape, variable_full_data.mean())
+
+                    if ei == 'exc':
+                        n_neurons = N_exc
+                    elif ei == 'inh':
+                        n_neurons = N_inh
+
+                    results[f'state_{ei}'][variable] = variable_full_data.reshape((-1,10,n_neurons)).mean(axis=1)
+                    print(results[f'state_{ei}'][variable].shape, results[f'state_{ei}'][variable].mean())
+
+        return results
+    else:
+        time_remaining = simulation_time
+        ii = 0
+        while time_remaining > 0:
+            # the code below is repeated what is above, function made issues
+            spike_monitors = [SpikeMonitor(G_exc), SpikeMonitor(G_inh)]
+            net.add(spike_monitors)
+
+            if state_variables is not None:
+                # define subset of neurons with state being recorded
+                if type(state_subset) == float:
+                    n_state = int(state_subset * N_exc)
+                    subset_ix = np.random.permutation(N_exc)[:n_state]
+
+                state_monitors = [StateMonitor(G_exc[:], state_variables, record=True)]
+                net.add(state_monitors)
+
+            if report:
+                report_status = 'stderr'
+            else:
+                report_status = None
+
+            net.run(time * second, report=report_status)
+
+            # __________________________
+
+            results = {'spikes': {
+                'exc': (np.array(spike_monitors[0].i), np.array(spike_monitors[0].t / second)),
+                'inh': (np.array(spike_monitors[1].i), np.array(spike_monitors[1].t / second))
+            }, 'weights': {}}
+
+            results['weights']['ei'] = np.array(Sei.w)
+
+            if plast_ie:
+                results['weights']['ie'] = np.array(Sie.w)
+
+            if plast_ee:
+                results['weights']['ee'] = np.array(See.w)
+
+            if target_rate_std != 0:
+                results['target_rates'] = target_rates
+
+            if meta_eta > 0:
+                results['target_rates'] = np.array(G_exc.neuron_target_rate)
+
+            if plasticity == 'threshold':
+                results['thresholds'] = np.array(G_exc.basethr / mV)
+
+            if state_variables is not None:
+                results['state'] = {}
+
+                # import pdb;pdb.set_trace()
+
+                for variable in state_variables:
+                    variable_full_data = np.array(
+                        state_monitors[0].get_states([variable])[variable] / default_units[variable])
+                    results['state'][variable] = variable_full_data.reshape((-1,10,8000)).mean(axis=1)
+
+            time_remaining -= chunks
+
+            with open(folder + f'chunk{ii}.pkl', 'wb') as f:
+                pickle.dump(results, f)
+
+            ii += 1
+
+        return results
 
 def update_matrix(Z, N_exc, delays, weights, plast_ie, plast_ee):
     Z_trained = np.copy(Z)
@@ -457,6 +577,10 @@ def run_n_save(simulation_params, args, matrix_file):
     results['params'] = vars(args)
     results['simulation_params'] = simulation_params
 
+    if 'thresholds' in results:
+        with open('data/thresholds.pkl', 'wb') as file:
+            pickle.dump(results['thresholds'], file)
+
     with open(matrix_file, 'rb') as file:
         Z, N_exc, patterns, exc_alpha, delays, _ = pickle.load(file)
 
@@ -472,16 +596,22 @@ def run_n_save(simulation_params, args, matrix_file):
     with open(args.output, 'wb') as file:
         pickle.dump(results, file)
 
-def load_stim_file(filename, patterns, randstim):
-    stims = pd.read_csv(filename, header=None, index_col=False).values
+def load_stim_file(filename, patterns, randstim, fraction=10):
+    stims = pd.read_csv(filename, header=None, index_col=False).values[:len(patterns)]
 
     if not randstim:
-        tuples = [(x[0], x[1], np.argwhere(patterns[int(x[2])]).flatten()[:20]) for x in stims]
+        tuples = []
+        for x in stims:
+            pt = np.argwhere(patterns[int(x[2])]).flatten()
+            cut = int(len(pt) / fraction)
+            tuples.append((x[0], x[1], pt[:cut]))
     else:
         tuples = []
         for x in stims:
             # patlen = len(patterns[int(x[2])])
-            randix = np.random.permutation(8000)[:20]
+            pt = np.argwhere(patterns[int(x[2])]).flatten()
+            cut = int(len(pt) / 100)
+            randix = np.random.permutation(8000)[:cut]
             tuples = [(x[0], x[1], randix)]
 
     return tuples
@@ -493,6 +623,7 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--input', type=str)
     parser.add_argument('-t', '--time', type=float, default=10)
     parser.add_argument('--rate_file', type=str)
+    parser.add_argument('--thr_file', type=str)
     parser.add_argument('--target_rate', type=float, default=3.)
     parser.add_argument('--trstd', type=float, default=0.)
     parser.add_argument('--trdistr', type=str, default='lognorm')
@@ -505,10 +636,14 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output', type=str)
     parser.add_argument('--matrix', type=str)
     parser.add_argument('--reset', action='store_true')
+    parser.add_argument('--a1_off', action='store_true')
     parser.add_argument('--alpha2', type=float, default=2)
     parser.add_argument('--record', type=str, nargs='*')
     parser.add_argument('--stimulus', type=str)
+    parser.add_argument('--stimfrac', type=float, default=10)
     parser.add_argument('--randstim', action='store_true')
+    parser.add_argument('--tau_stdp', type=float, default=20)
+    parser.add_argument('--meta_eta', type=float, default=0)
 
     args = parser.parse_args()
 
@@ -522,10 +657,23 @@ if __name__ == '__main__':
     else:
         target_rate = args.target_rate
 
+    if args.thr_file is not None:
+        with open(args.thr_file, 'rb') as file:
+            thresholds = pickle.load(file)
+    else:
+        thresholds = None
+
     if args.stimulus is not None:
-        stimulus_tuples = load_stim_file(args.stimulus, patterns, randstim=args.randstim)
+        stimulus_tuples = load_stim_file(args.stimulus, patterns, randstim=args.randstim, fraction=args.stimfrac)
     else:
         stimulus_tuples = None
+
+    if args.a1_off:
+        alpha1 = False
+    else:
+        alpha1 = True
+
+    print(args.record)
 
     simulation_params = dict(
         Z=Z,
@@ -544,8 +692,12 @@ if __name__ == '__main__':
         plast_ie=args.eiplast,
         plast_ee=args.eeplast,
         reset_potential=args.reset,
+        alpha1=alpha1,
         alpha2=args.alpha2,
-        stimuli=stimulus_tuples
+        stimuli=stimulus_tuples,
+        thresholds=thresholds,
+        tau_stdp_ms=args.tau_stdp,
+        meta_eta=args.meta_eta
     )
 
     run_n_save(simulation_params, args, matrix_file=args.input)
