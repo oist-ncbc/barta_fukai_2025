@@ -75,7 +75,10 @@ if __name__ == '__main__':
         ix_inh, t_inh = results['spikes']['inh']
 
         if args.max_time is None:
-            max_time = results['params']['time']
+            if 'simulation_time' in results.keys():
+                max_time = results['simulation_time']
+            else:
+                max_time = results['params']['time']
         else:
             max_time = args.max_time
 
