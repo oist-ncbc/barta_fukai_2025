@@ -368,6 +368,9 @@ if __name__ == '__main__':
     parser.add_argument('--meta_eta', type=float, default=0)
     parser.add_argument('--vardata_e', type=str)
     parser.add_argument('--vardata_i', type=str)
+    parser.add_argument('--exc', action='store_true')
+    parser.add_argument('--inh', action='store_true')
+    parser.add_argument('--count', type=int, default=500)
 
     args = parser.parse_args()
 
@@ -424,6 +427,9 @@ if __name__ == '__main__':
         meta_eta=args.meta_eta,
         varstats_e=vardata_e,
         varstats_i=vardata_i,
+        exc_stim=args.exc,
+        inh_stim=args.inh,
+        stim_count=args.count
     )
 
     run_n_save(simulation_params, args, matrix_file=args.input)
