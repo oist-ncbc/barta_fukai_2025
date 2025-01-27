@@ -416,14 +416,14 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
 
         net.run(simulation_time*second, report=report_status)
 
-        results['simulation_time'] = simulation_time
-
         # __________________________
 
         results = {'spikes': {
             'exc': (np.array(spike_monitors[0].i), np.array(spike_monitors[0].t / second)),
             'inh': (np.array(spike_monitors[1].i), np.array(spike_monitors[1].t / second))
         }, 'weights': {}}
+
+        results['simulation_time'] = simulation_time
 
         results['weights']['ei'] = np.array(Sei.w)
 
