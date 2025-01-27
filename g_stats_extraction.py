@@ -13,7 +13,7 @@ if __name__ == '__main__':
     parser.add_argument('--plast', type=str)
     parser.add_argument('--patterns', type=int)
     parser.add_argument('--prefix', type=str)
-    parser.add_argument('--suffix', type=str)
+    parser.add_argument('--suffix', type=str, default='')
 
     args = parser.parse_args()
 
