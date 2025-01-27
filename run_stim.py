@@ -28,6 +28,9 @@ if __name__ == '__main__':
     parser.add_argument('--rate_file', type=str)
     parser.add_argument('--tau_stdp', type=float, default=20)
     parser.add_argument('--meta_eta', type=float, default=0)
+    parser.add_argument('--exc', action='store_true')
+    parser.add_argument('--inh', action='store_true')
+    parser.add_argument('--count', type=int, default=None)
     args = parser.parse_args()
 
     with open('config/server_config.yaml') as f:
@@ -37,6 +40,14 @@ if __name__ == '__main__':
         suffix = '_' + args.suffix
     else:
         suffix = ''
+
+    perturb = ''
+    if args.exc:
+        perturb = perturb + '--exc '
+    if args.inh:
+        perturb = perturb + '--inh '
+    if args.count is not None:
+        perturb = perturb + '--count ' + str(args.count)
 
     if args.train_matrix == 'naive':
         matrix = f'{args.prefix}{args.patterns}'
@@ -198,7 +209,7 @@ if __name__ == '__main__':
             --vardata_e config/var_data_{args.plasticity}_{args.prefix}{args.patterns}{suffix}_e.csv \
             --vardata_i config/var_data_{args.plasticity}_{args.prefix}{args.patterns}{suffix}_i.csv \
             --tau_stdp {args.tau_stdp} \
-            --reset {thresholds}
+            --reset {thresholds} {perturb}
         python analysis.py -r {path}/data/trained_{args.plasticity}_{args.prefix}{args.patterns}_results_perturbed{suffix}.pkl -t 4001 --img img/tmp.png
         """)
         # os.system(f"""
