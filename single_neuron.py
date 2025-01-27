@@ -309,7 +309,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
             results['state'][variable] = variable_full_data.reshape((-1, 10, 8000)).mean(axis=1)
             print(results['state'][variable].mean())
 
-    results['simulation_time'] = simulation_time
+    results['simulation_time'] = np.array(simulation_time / second)
 
     return results
 

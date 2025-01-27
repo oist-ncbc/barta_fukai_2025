@@ -416,6 +416,8 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
 
         net.run(simulation_time*second, report=report_status)
 
+        results['simulation_time'] = simulation_time
+
         # __________________________
 
         results = {'spikes': {
