@@ -168,7 +168,7 @@ if __name__ == '__main__':
             --stimfrac {args.fraction} \
             --tau_stdp {args.tau_stdp} \
             --record gi ge {thresholds}
-        python analysis.py -r {path}/data/trained_{args.plasticity}_{args.prefix}{args.patterns}_results_state{suffix}.pkl --dt 0.01 --img img/tmp.png
+        python analysis.py -r {path}/data/trained_{args.plasticity}_{args.prefix}{args.patterns}_results_state{suffix}.pkl --img img/tmp.png
         """)
 
     if args.spont_state:
@@ -195,8 +195,8 @@ if __name__ == '__main__':
             --eta 0 \
             --target_rate 3 \
             --alpha2 0.3 \
-            --vardata_e config/var_data_{args.plasticity}_e.csv \
-            --vardata_i config/var_data_{args.plasticity}_i.csv \
+            --vardata_e config/var_data_{args.plasticity}_{args.prefix}{args.patterns}{suffix}_e.csv \
+            --vardata_i config/var_data_{args.plasticity}_{args.prefix}{args.patterns}{suffix}_i.csv \
             --tau_stdp {args.tau_stdp} \
             --reset {thresholds}
         python analysis.py -r {path}/data/trained_{args.plasticity}_{args.prefix}{args.patterns}_results_perturbed{suffix}.pkl -t 4001 --img img/tmp.png
