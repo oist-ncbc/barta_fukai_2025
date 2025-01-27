@@ -198,10 +198,18 @@ if __name__ == '__main__':
         """)
 
     if args.perturb:
+        exc_inh_suffix = ''
+        if args.exc:
+            exc_inh_suffix = exc_inh_suffix + '_exc'
+        if args.inh:
+            exc_inh_suffix = exc_inh_suffix + '_inh'
+
+        output_file = f'{path}/data/trained_{args.plasticity}_{args.prefix}{args.patterns}_results_perturbed{suffix}{exc_inh_suffix}.pkl'
+
         os.system(f"""
         python single_neuron.py \
             -f {path}/connectivity/training_{args.plasticity}_{args.prefix}{args.patterns}_matrix{suffix}.pkl \
-            -o {path}/data/trained_{args.plasticity}_{args.prefix}{args.patterns}_results_perturbed{suffix}.pkl \
+            -o {output_file} \
             -t {args.sponttime} \
             --eta 0 \
             --target_rate 3 \
@@ -210,7 +218,7 @@ if __name__ == '__main__':
             --vardata_i config/var_data_{args.plasticity}_{args.prefix}{args.patterns}{suffix}_i.csv \
             --tau_stdp {args.tau_stdp} \
             --reset {thresholds} {perturb}
-        python analysis.py -r {path}/data/trained_{args.plasticity}_{args.prefix}{args.patterns}_results_perturbed{suffix}.pkl -t 4001 --img img/tmp.png
+        python analysis.py -r {output_file} --img img/tmp.png
         """)
         # os.system(f"""
         # python analysis.py -f -r {path}/data/trained_{args.plasticity}_nonburst{args.patterns}_results_perturbed{suffix}.pkl -t 2001 --img img/tmp.png
