@@ -7,25 +7,11 @@ import pandas as pd
 from network import update_matrix
 
 
-def get_stim_matrix(stimuli, N_exc, simulation_time, dt=0.1):
-    time_arr = np.arange(0, simulation_time + 1e-5, dt)
-
-    stim_matrix = np.zeros((N_exc, len(time_arr)), dtype=float)
-
-    for start, end, neurons in stimuli:
-        for ix in neurons:
-            mask = (time_arr >= start) & (time_arr < end)
-            stim_matrix[ix][mask] = 1.
-
-    return stim_matrix
-
-
 def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisson, poisson_amplitude,
                 simulation_time, learning_rate, varstats_e, varstats_i, plast_ie=False, plast_ee=False, report=True, state_variables=None,
-                state_subset=0.1,
-                stimuli=None, N_exc=8000, alpha1=True, alpha2=2, reset_potential=False, target_rate_std=0,
+                state_subset=0.1, N_exc=8000, alpha1=True, alpha2=2, reset_potential=False, target_rate_std=0,
                 target_distr='lognorm',
-                thresholds=None, seed_num=42, tau_stdp_ms=20, meta_eta=0):
+                thresholds=None, seed_num=42, tau_stdp_ms=20, meta_eta=0, exc_stim=False, inh_stim=False, stim_count=500):
     """
     Run network of neurons with or without inhibitory plasticity.
     :param Z: connection matrix with weights in nS
@@ -96,15 +82,17 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     # input_list = np.arange(0, 1, 0.1) - 0.45
     input_list = np.linspace(-0.35, 0.35, 8)
 
-    for ii in range(500):
-        for inp in input_list:
-            input_arr_exc = np.append(input_arr_exc, pair*inp)
-            input_arr_inh = np.append(input_arr_inh, np.zeros(5))
+    if exc_stim:
+        for ii in range(stim_count):
+            for inp in input_list:
+                input_arr_exc = np.append(input_arr_exc, pair*inp)
+                input_arr_inh = np.append(input_arr_inh, np.zeros(5))
 
-    for ii in range(500):
-        for inp in input_list:
-            input_arr_inh = np.append(input_arr_inh, pair*inp)
-            input_arr_exc = np.append(input_arr_exc, np.zeros(5))
+    if inh_stim:
+        for ii in range(stim_count):
+            for inp in input_list:
+                input_arr_inh = np.append(input_arr_inh, pair*inp)
+                input_arr_exc = np.append(input_arr_exc, np.zeros(5))
 
     gext = TimedArray(input_arr_exc * nS, dt=0.1*second)
     gext_inh = TimedArray(input_arr_inh * nS, dt=0.1*second)
@@ -320,6 +308,8 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
             print(variable_full_data.mean())
             results['state'][variable] = variable_full_data.reshape((-1, 10, 8000)).mean(axis=1)
             print(results['state'][variable].mean())
+
+    results['simulation_time'] = simulation_time
 
     return results
 
