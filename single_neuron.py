@@ -421,7 +421,6 @@ if __name__ == '__main__':
         reset_potential=args.reset,
         alpha1=alpha1,
         alpha2=args.alpha2,
-        stimuli=stimulus_tuples,
         thresholds=thresholds,
         tau_stdp_ms=args.tau_stdp,
         meta_eta=args.meta_eta,
