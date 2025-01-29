@@ -7,6 +7,8 @@ import yaml
 
 from sklearn.covariance import MinCovDet
 
+from utils import *
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
@@ -34,7 +36,7 @@ if __name__ == '__main__':
     # ----------------- STIMULUS -----------------
 
     # res_file = f'data/trained_{plast}_nonburst{npat}_results_stim.pkl'
-    res_file = f'{path}/data/trained_{plast}_{args.prefix}{npat}_results_state.pkl'
+    res_file = f'{path}/data/trained_{plast}_{args.prefix}{npat}_results_state{underscore(args.suffix)}.pkl'
 
     with open(res_file, 'rb') as file:
         results_state = pickle.load(file)

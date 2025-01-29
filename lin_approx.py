@@ -1,56 +1,54 @@
 import numpy as np
 from tqdm import tqdm
 import pickle
+import yaml
+
+from utils import underscore
 
 
 folder = 'sp1'
-npat = 1000
-path = f'/media/tomasbarta/DATA/StructuredInihibition/{folder}'
+
+with open('config/server_config.yaml') as f:
+    config = yaml.safe_load(f)
+
+path = config['data_path']
 
 
-def get_activations(plast, ei='exc'):
-    res_file_pert = f'{path}/data/trained_{plast}_nonburst{npat}_results_perturbed.pkl'
-    # res_file_spont = f'{path}/data/trained_{plast}_nonburst{npat}_results_spont.pkl'
-
-    with open(res_file_pert, 'rb') as file:
-        results_pert = pickle.load(file)
-
+def get_activations(plast, npat, folder, prefix, suffix, postsynaptic, stim_len=40, skip=5):
     inh = ''
     n_neuron = 8000
-    if ei == 'inh':
+    if postsynaptic == 'inh':
         inh = '_inh'
         n_neuron = 2000
 
-    # res_corrected = np.concatenate([
-    #     results_pert['analysis'][f'spike_counts{inh}'][:n_neuron,5:4005],
-    #     results_pert['analysis'][f'spike_counts{inh}'][:n_neuron,8005:12005],
-    # ], axis=1)
-
     xx = np.linspace(-0.35, 0.35, 8)
-    stims = 500
 
-    gains = {}
+    activations = {}
 
-    for i, ei in enumerate(['exc', 'inh']):
-        gains[ei] = []
+    for presynaptic in ['exc','inh']:
+        activations[presynaptic] = []
 
-        averaged = results_pert['analysis']['spike_counts'][:n_neuron, 5:40005].reshape((n_neuron, stims * 2, 40))[:,
-                   i * stims:(i + 1) * stims, :].mean(axis=1)
+        res_file_pert = f'{path}/{folder}/data/trained_{plast}_{prefix}{npat}_results_perturbed{underscore(suffix)}_{presynaptic}.pkl'
 
-        for trace in tqdm(averaged):
-            yy = np.zeros(8)
+        with open(res_file_pert, 'rb') as file:
+            results_pert = pickle.load(file)
 
-            for i in range(8):
-                yy[i] = trace[5 * i]
+        nstim = results_pert['params']['count']
 
-            gain = np.polyfit(xx, yy, 3)[-2]
-            gains[ei].append(gain)
+        traces = results_pert['analysis'][f'spike_counts{inh}'][:,5:].reshape(n_neuron, nstim, stim_len).mean(axis=1)
 
-        gains[ei] = np.array(gains[ei])
+        for trace in tqdm(traces):
+            yy = trace[::skip]
+            coefs = np.polyfit(xx, yy, deg=3)[::-1]
+            activations[presynaptic].append([coefs[0], coefs[1]])
 
-    return gains
+        activations[presynaptic] = np.array(activations[presynaptic])
 
-def run_lin(plast, patterns, linear_approximations, rand=False):
+    return activations
+
+def run_lin(W_lin, patterns, rand=False, seed=42):
+    np.random.seed(seed)
+
     rates = {}
     rates['pattern'] = []
     rates['rest'] = []
@@ -84,18 +82,16 @@ def run_lin(plast, patterns, linear_approximations, rand=False):
     pat_sizes = tmp_patterns.sum(axis=1)
     norm_patterns = (tmp_patterns.T / pat_sizes).T
 
-    Z_lin = linear_approximations[plast]
-
     # for ix in tqdm(np.random.randint(low=0, high=1000, size=10)):
-    for ix in tqdm(range(10)):
+    for ix in tqdm(range(200)):
         full_pattern = np.concatenate([tmp_patterns[ix], np.zeros(2000)])
 
-        x = full_pattern * (np.random.rand(10000) < 0.1) #+ np.random.randn(10000) * 1
+        x = full_pattern * (np.random.rand(10000) < 1) #+ np.random.randn(10000) * 1
         trace = []
 
         for i in (range(500)):
             trace.append(x)
-            x = 0.999 * x + 0.001 * (Z_lin @ x)
+            x = 0.999 * x + 0.001 * (W_lin @ x)
 
         trace = np.array(trace)
 
@@ -120,13 +116,13 @@ def run_lin(plast, patterns, linear_approximations, rand=False):
         corrs['second'].append(pat_corrs.max(axis=0))
         corrs['second_ix'].append(np.argmax(pat_corrs, axis=0))
 
-        pat_inh = (norm_patterns @ (Z_lin[:8000,8000:] @ trace[:,8000:].T))
+        pat_inh = (norm_patterns @ (W_lin[:8000,8000:] @ trace[:,8000:].T))
 
         inhibs['pattern'].append(pat_inh[ix])
         pat_inh = np.delete(pat_inh, ix, axis=0)
         inhibs['rest'].append(pat_inh.mean(axis=0))
 
-        pat_exc = (norm_patterns @ (Z_lin[:8000,:8000] @ trace[:,:8000].T))
+        pat_exc = (norm_patterns @ (W_lin[:8000,:8000] @ trace[:,:8000].T))
 
         excits['pattern'].append(pat_exc[ix])
         pat_inh = np.delete(pat_exc, ix, axis=0)
@@ -134,36 +130,26 @@ def run_lin(plast, patterns, linear_approximations, rand=False):
 
     return rates, corrs, inhibs, excits
 
-def get_linear_approximations():
-    act_exc = {}
-    act_inh = {}
+def get_linear_approximations(plast, npat, folder, prefix, suffix=''):
+    mat_file = f'{path}/{folder}/connectivity/training_{plast}_{prefix}{npat}_matrix{underscore(suffix)}.pkl'
 
-    act_exc['hebb'] = get_activations('hebb')
-    act_exc['rate'] = get_activations('rate')
-    act_inh['hebb'] = get_activations('hebb', ei='inh')
-    act_inh['rate'] = get_activations('rate', ei='inh')
+    with open(mat_file, 'rb') as file:
+        Z, N_exc, patterns, exc_alpha, delays, params = pickle.load(file)
 
-    linear_approximations = {}
+    act_exc = get_activations(plast, npat, folder, prefix, suffix, 'exc')
+    act_inh = get_activations(plast, npat, folder, prefix, suffix, 'inh')
 
-    for plast in ['hebb','rate']:
-        mat_file = f'{path}/connectivity/training_{plast}_nonburst{npat}_matrix.pkl'
+    pat_sizes = patterns.sum(axis=1)
+    norm_patterns = (patterns.T / pat_sizes).T
 
-        with open(mat_file, 'rb') as file:
-            Z, N_exc, patterns, exc_alpha, delays, params = pickle.load(file)
+    W_lin = np.copy(Z)
 
-        pat_sizes = patterns.sum(axis=1)
-        norm_patterns = (patterns.T / pat_sizes).T
+    W_lin[:8000, :8000] = (Z[:8000, :8000].T * act_exc['exc'][:,1]).T
+    W_lin[:8000, 8000:] = (Z[:8000, 8000:].T * act_exc['inh'][:,1]).T
+    W_lin[8000:, :8000] = (Z[8000:, :8000].T * act_inh['exc'][:,1]).T
+    W_lin[8000:, 8000:] = (Z[8000:, 8000:].T * act_inh['inh'][:,1]).T
 
-        Z_lin = np.copy(Z)
-
-        Z_lin[:8000, :8000] = (Z[:8000, :8000].T * act_exc[plast]['exc']).T
-        Z_lin[:8000, 8000:] = (Z[:8000, 8000:].T * act_exc[plast]['inh']).T
-        Z_lin[8000:, :8000] = (Z[8000:, :8000].T * act_inh[plast]['exc']).T
-        Z_lin[8000:, 8000:] = (Z[8000:, 8000:].T * act_inh[plast]['inh']).T
-
-        linear_approximations[plast] = Z_lin
-
-    return linear_approximations, patterns, act_exc, act_inh
+    return W_lin, patterns, act_exc, act_inh
 
 
 if __name__ == '__main__':
