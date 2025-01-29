@@ -25,3 +25,9 @@ def despine_ax(ax, where=None, remove_ticks=None):
 
     for side in to_despine:
         ax.spines[side].set_visible(False)
+
+def underscore(text):
+    if len(text) > 0:
+        return '_' + text
+    else:
+        return text
