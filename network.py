@@ -19,7 +19,7 @@ def get_stim_matrix(stimuli, N_exc, simulation_time, dt=0.1):
 def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisson, poisson_amplitude,
                 simulation_time, learning_rate, plast_ie=False, plast_ee=False, report=True, state_variables=None, state_subset=0.1,
                 stimuli=None, N_exc=8000, alpha1=True, alpha2=2, reset_potential=False, target_rate_std=0, target_distr='lognorm',
-                thresholds=None, seed_num=42, tau_stdp_ms=20, meta_eta=0, chunks=None):
+                thresholds=None, seed_num=42, tau_stdp_ms=20, meta_eta=0, chunks=None, recharge=0):
     """
     Run network of neurons with or without inhibitory plasticity.
     :param Z: connection matrix with weights in nS
@@ -79,6 +79,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     tau_bmon = 20*second
     tidip = 160*ms
     tau_rate = 10*second  # set very long rate integration for smooth rate estimate
+    tau_signal = 500*ms
     # ________________________
 
     # Neural model equations
@@ -88,6 +89,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     Isyn = -(ge)*(v-Ee)-(gi)*(v-Ei) : amp
     
     dx/dt = -x/tau_stdp : 1
+    dq/dt = -q/tau_signal : 1
     db_dec/dt = -b_dec/tau_bdec : 1
     db_mon/dt = -b_mon/tau_bmon : 1
     
@@ -109,6 +111,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     gL : siemens
     network_rate : 1
     neuron_target_rate : 1
+    rech : 1
     '''
 
 
@@ -119,7 +122,8 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
         H1 += a1
         H2 += a2
         b_dec += 1
-        x += 1
+        x += 1-q*rech
+        q = 1
         v = EL
         '''
     else:
@@ -127,7 +131,8 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
         H1 += a1
         H2 += a2
         b_dec += 1
-        x += 1
+        x += 1-q*rech
+        q = 1
         '''
 
     if plasticity == 'threshold':
@@ -148,6 +153,13 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     G_inh = NeuronGroup(N_inh, eqs, threshold='v > theta', reset=reset, method='exponential_euler', refractory=refrac)
 
     G_exc.neuron_target_rate = target_rate
+
+    if recharge:
+        G_exc.rech = 1
+        G_inh.rech = 0
+    else:
+        G_exc.rech = 0
+        G_inh.rech = 0
 
     target_b_mon = 0.1*Hz*tau_bmon*2
 
@@ -176,7 +188,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     G_exc.v = (np.random.rand(N_exc)*10)*mV + EL
     G_inh.v = (np.random.rand(N_inh)*10)*mV + EL
 
-    G_exc.z = target_rate
+    # G_exc.z = target_rate
 
     if thresholds is None:
         G_exc.basethr = omega
@@ -646,6 +658,7 @@ if __name__ == '__main__':
     parser.add_argument('--randstim', action='store_true')
     parser.add_argument('--tau_stdp', type=float, default=20)
     parser.add_argument('--meta_eta', type=float, default=0)
+    parser.add_argument('--recharge', type=float, default=0)
 
     args = parser.parse_args()
 
@@ -699,7 +712,8 @@ if __name__ == '__main__':
         stimuli=stimulus_tuples,
         thresholds=thresholds,
         tau_stdp_ms=args.tau_stdp,
-        meta_eta=args.meta_eta
+        meta_eta=args.meta_eta,
+        recharge=args.recharge
     )
 
     run_n_save(simulation_params, args, matrix_file=args.input)

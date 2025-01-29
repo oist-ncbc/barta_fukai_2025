@@ -28,6 +28,7 @@ if __name__ == '__main__':
     parser.add_argument('--rate_file', type=str)
     parser.add_argument('--tau_stdp', type=float, default=20)
     parser.add_argument('--meta_eta', type=float, default=0)
+    parser.add_argument('--recharge', type=float, default=0)
     parser.add_argument('--exc', action='store_true')
     parser.add_argument('--inh', action='store_true')
     parser.add_argument('--count', type=int, default=None)
@@ -82,6 +83,7 @@ if __name__ == '__main__':
             --target_rate {args.target_rate} \
             --alpha2 0.3 \
             --reset \
+            --recharge {args.recharge} \
             --plasticity {args.plasticity} \
             --tau_stdp {args.tau_stdp} \
             --meta_eta {args.meta_eta} \
