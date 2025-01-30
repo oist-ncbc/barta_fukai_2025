@@ -3,6 +3,7 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import yaml
 
 from analysis import get_spike_counts
 
@@ -14,9 +15,15 @@ if __name__ == '__main__':
     parser.add_argument('--patterns', type=int, nargs='+')
     parser.add_argument('--folder', type=str, default='')
     parser.add_argument('--img', type=str)
+    parser.add_argument('--prefix', type=str)
     parser.add_argument('--suffix', type=str, nargs='+')
 
     args = parser.parse_args()
+
+    with open('config/server_config.yaml') as f:
+        config = yaml.safe_load(f)
+
+    path = f"{config['data_path']}/{args.folder}"
 
     if len(args.suffix) == 0:
         suffices = ['']*len(args.patterns)
@@ -35,7 +42,7 @@ if __name__ == '__main__':
         to_be_df = {}
 
         if args.folder != '':
-            res_file = '/media/tomasbarta/DATA/StructuredInihibition/' + args.folder + f'/data/trained_{plast}_nonburst{pat_num}_results_300stim{suffix}.pkl'
+            res_file = f'{path}/data/trained_{plast}_{args.prefix}{pat_num}_results_300stim{suffix}.pkl'
 
         with open(res_file, 'rb') as file:
             results = pickle.load(file)
