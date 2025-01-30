@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def despine_ax(ax, where=None, remove_ticks=None):
     if where is None:
         where = 'trlb'
@@ -31,3 +34,15 @@ def underscore(text):
         return '_' + text
     else:
         return text
+    
+def lognorm_randvar(mean, sigma, size):
+    E = mean
+    Var = sigma ** 2
+
+    sig = np.sqrt(np.log(Var/(E*E) + 1))
+    mu = np.log(E) - sig**2 / 2
+
+    return np.exp(np.random.randn(size)*sig + mu)
+
+def sortby(x, key):
+    return np.sort(x)[np.argsort(np.argsort(key))]
