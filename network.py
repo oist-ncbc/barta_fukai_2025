@@ -79,7 +79,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     tau_bmon = 20*second
     tidip = 160*ms
     tau_rate = 10*second  # set very long rate integration for smooth rate estimate
-    tau_signal = 500*ms
+    tau_coincidence = 50*ms
     # ________________________
 
     # Neural model equations
@@ -89,7 +89,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     Isyn = -(ge)*(v-Ee)-(gi)*(v-Ei) : amp
     
     dx/dt = -x/tau_stdp : 1
-    dq/dt = -q/tau_signal : 1
+    dq/dt = -q/tau_coincidence : 1
     db_dec/dt = -b_dec/tau_bdec : 1
     db_mon/dt = -b_mon/tau_bmon : 1
     
@@ -257,7 +257,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
                  w = clip(w+(x_post-alpha)*eta, 0, 100)'''
 
         post_eqs_inh = '''
-                  w = clip(w+x_pre*eta, 0, 100)'''
+                 w = clip(w+x_pre*eta, 0, 100)'''
 
     elif plasticity == 'idip':
         pre_eqs_inh = '''
@@ -418,7 +418,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
                 n_state = int(state_subset * N_exc)
                 subset_ix = np.random.permutation(N_exc)[:n_state]
 
-            state_monitors = [StateMonitor(G_exc[:], state_variables, record=True), StateMonitor(G_inh[:], state_variables, record=True)]
+            state_monitors = [StateMonitor(G_exc[:10], state_variables, record=True), StateMonitor(G_inh[:1], state_variables, record=True)]
             net.add(state_monitors)
 
         if report:
@@ -475,71 +475,73 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
 
         return results
     else:
-        time_remaining = simulation_time
-        ii = 0
-        while time_remaining > 0:
-            # the code below is repeated what is above, function made issues
-            spike_monitors = [SpikeMonitor(G_exc), SpikeMonitor(G_inh)]
-            net.add(spike_monitors)
+        raise Exception('chunks not supported')
+    # else:
+    #     time_remaining = simulation_time
+    #     ii = 0
+    #     while time_remaining > 0:
+    #         # the code below is repeated what is above, function made issues
+    #         spike_monitors = [SpikeMonitor(G_exc), SpikeMonitor(G_inh)]
+    #         net.add(spike_monitors)
 
-            if state_variables is not None:
-                # define subset of neurons with state being recorded
-                if type(state_subset) == float:
-                    n_state = int(state_subset * N_exc)
-                    subset_ix = np.random.permutation(N_exc)[:n_state]
+    #         if state_variables is not None:
+    #             # define subset of neurons with state being recorded
+    #             if type(state_subset) == float:
+    #                 n_state = int(state_subset * N_exc)
+    #                 subset_ix = np.random.permutation(N_exc)[:n_state]
 
-                state_monitors = [StateMonitor(G_exc[:], state_variables, record=True)]
-                net.add(state_monitors)
+    #             state_monitors = [StateMonitor(G_exc[:], state_variables, record=True)]
+    #             net.add(state_monitors)
 
-            if report:
-                report_status = 'stderr'
-            else:
-                report_status = None
+    #         if report:
+    #             report_status = 'stderr'
+    #         else:
+    #             report_status = None
 
-            net.run(time * second, report=report_status)
+    #         net.run(time * second, report=report_status)
 
-            # __________________________
+    #         # __________________________
 
-            results = {'spikes': {
-                'exc': (np.array(spike_monitors[0].i), np.array(spike_monitors[0].t / second)),
-                'inh': (np.array(spike_monitors[1].i), np.array(spike_monitors[1].t / second))
-            }, 'weights': {}}
+    #         results = {'spikes': {
+    #             'exc': (np.array(spike_monitors[0].i), np.array(spike_monitors[0].t / second)),
+    #             'inh': (np.array(spike_monitors[1].i), np.array(spike_monitors[1].t / second))
+    #         }, 'weights': {}}
 
-            results['weights']['ei'] = np.array(Sei.w)
+    #         results['weights']['ei'] = np.array(Sei.w)
 
-            if plast_ie:
-                results['weights']['ie'] = np.array(Sie.w)
+    #         if plast_ie:
+    #             results['weights']['ie'] = np.array(Sie.w)
 
-            if plast_ee:
-                results['weights']['ee'] = np.array(See.w)
+    #         if plast_ee:
+    #             results['weights']['ee'] = np.array(See.w)
 
-            if target_rate_std != 0:
-                results['target_rates'] = target_rates
+    #         if target_rate_std != 0:
+    #             results['target_rates'] = target_rates
 
-            if meta_eta > 0:
-                results['target_rates'] = np.array(G_exc.neuron_target_rate)
+    #         if meta_eta > 0:
+    #             results['target_rates'] = np.array(G_exc.neuron_target_rate)
 
-            if plasticity == 'threshold':
-                results['thresholds'] = np.array(G_exc.basethr / mV)
+    #         if plasticity == 'threshold':
+    #             results['thresholds'] = np.array(G_exc.basethr / mV)
 
-            if state_variables is not None:
-                results['state'] = {}
+    #         if state_variables is not None:
+    #             results['state'] = {}
 
-                # import pdb;pdb.set_trace()
+    #             # import pdb;pdb.set_trace()
 
-                for variable in state_variables:
-                    variable_full_data = np.array(
-                        state_monitors[0].get_states([variable])[variable] / default_units[variable])
-                    results['state'][variable] = variable_full_data.reshape((-1,10,8000)).mean(axis=1)
+    #             for variable in state_variables:
+    #                 variable_full_data = np.array(
+    #                     state_monitors[0].get_states([variable])[variable] / default_units[variable])
+    #                 results['state'][variable] = variable_full_data.reshape((-1,10,8000)).mean(axis=1)
 
-            time_remaining -= chunks
+    #         time_remaining -= chunks
 
-            with open(folder + f'chunk{ii}.pkl', 'wb') as f:
-                pickle.dump(results, f)
+    #         with open(folder + f'chunk{ii}.pkl', 'wb') as f:
+    #             pickle.dump(results, f)
 
-            ii += 1
+    #         ii += 1
 
-        return results
+    #     return results
 
 def update_matrix(Z, N_exc, delays, weights, plast_ie, plast_ee):
     Z_trained = np.copy(Z)
@@ -585,7 +587,7 @@ def update_matrix(Z, N_exc, delays, weights, plast_ie, plast_ee):
 
     return Z_trained, delays_trained
 
-def run_n_save(simulation_params, args, matrix_file):
+def run_n_save(simulation_params, args, matrix_file, output, matrix_out):
     results = run_network(**simulation_params)
 
     results['params'] = vars(args)
@@ -598,16 +600,16 @@ def run_n_save(simulation_params, args, matrix_file):
     with open(matrix_file, 'rb') as file:
         Z, N_exc, patterns, exc_alpha, delays, _ = pickle.load(file)
 
-    if args.matrix is not None:
+    if matrix_out is not None:
         Z_new, delays_new = update_matrix(Z, N_exc, delays, results['weights'],
                                           plast_ie=simulation_params['plast_ie'],
                                           plast_ee=simulation_params['plast_ee'])
 
-        with open(args.matrix, 'wb') as file:
+        with open(matrix_out, 'wb') as file:
             savetuple = (Z_new, N_exc, patterns, exc_alpha, delays_new, vars(args))
             pickle.dump(savetuple, file)
 
-    with open(args.output, 'wb') as file:
+    with open(output, 'wb') as file:
         pickle.dump(results, file)
 
 def load_stim_file(filename, patterns, randstim, fraction=10):
@@ -716,4 +718,4 @@ if __name__ == '__main__':
         recharge=args.recharge
     )
 
-    run_n_save(simulation_params, args, matrix_file=args.input)
+    run_n_save(simulation_params, args, matrix_file=args.input, output=args.output, matrix_out=args.matrix)
