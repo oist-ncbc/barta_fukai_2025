@@ -118,6 +118,7 @@ if __name__ == '__main__':
 
         bins = np.linspace(-0.02, 0.2, 50)
         axes[0,1].hist(correlations['pat'], bins=bins, histtype='step')
+        axes[0,1].axvline(correlations['rnd'].mean(), color=f'C{ii}')
         axes[0,1].set_xlabel('within-pattern correlation')
 
         bins = np.linspace(-0.01, 0.01, 30)
@@ -125,7 +126,7 @@ if __name__ == '__main__':
         axes[1,1].axvline(correlations['rnd'].mean(), color=f'C{ii}')
         axes[1,1].set_xlabel('within-rand.pattern correlation')
 
-        axes[1,0].plot(count_times, 100*(np.cumsum(activations > 0.9, axis=1) > 0).mean(axis=0))
+        axes[1,0].plot(count_times[:], 100*(np.cumsum(activations[:,:] > 0.9, axis=1) > 0).mean(axis=0))
         axes[1,0].set_xlabel('time (s)')
         axes[1,0].set_ylabel('% of patterns activated')
 

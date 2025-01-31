@@ -3,7 +3,7 @@ from tqdm import tqdm
 import pickle
 import yaml
 
-from utils import underscore
+from utils import *
 
 
 folder = 'sp1'
@@ -83,15 +83,15 @@ def run_lin(W_lin, patterns, rand=False, seed=42):
     norm_patterns = (tmp_patterns.T / pat_sizes).T
 
     # for ix in tqdm(np.random.randint(low=0, high=1000, size=10)):
-    for ix in tqdm(range(200)):
+    for ix in tqdm(range(20)):
         full_pattern = np.concatenate([tmp_patterns[ix], np.zeros(2000)])
 
         x = full_pattern * (np.random.rand(10000) < 1) #+ np.random.randn(10000) * 1
         trace = []
 
-        for i in (range(500)):
+        for i in (range(100)):
             trace.append(x)
-            x = 0.999 * x + 0.001 * (W_lin @ x)
+            x = 0.99 * x + 0.01 * (W_lin @ x)
 
         trace = np.array(trace)
 
@@ -130,7 +130,7 @@ def run_lin(W_lin, patterns, rand=False, seed=42):
 
     return rates, corrs, inhibs, excits
 
-def get_linear_approximations(plast, npat, folder, prefix, suffix=''):
+def get_linear_approximations(plast, npat, folder, prefix, suffix='', order=None):
     mat_file = f'{path}/{folder}/connectivity/training_{plast}_{prefix}{npat}_matrix{underscore(suffix)}.pkl'
 
     with open(mat_file, 'rb') as file:
@@ -138,6 +138,14 @@ def get_linear_approximations(plast, npat, folder, prefix, suffix=''):
 
     act_exc = get_activations(plast, npat, folder, prefix, suffix, 'exc')
     act_inh = get_activations(plast, npat, folder, prefix, suffix, 'inh')
+
+    if type(order) == str and order == 'equal':
+        act_exc['exc'][:,1] = sortby(act_exc['exc'][:,1], act_exc['exc'][:,1][::-1])
+    elif len(order) == 8000:
+        act_exc['exc'][:,1] = sortby(act_exc['exc'][:,1], order)
+        # act_exc['inh'] = np.ones_like(act_exc['inh']) * act_exc['inh'].mean(axis=0)
+        # act_inh['exc'] = np.ones_like(act_inh['exc']) * act_inh['exc'].mean(axis=0)
+        # act_inh['inh'] = np.ones_like(act_inh['inh']) * act_inh['inh'].mean(axis=0)
 
     pat_sizes = patterns.sum(axis=1)
     norm_patterns = (patterns.T / pat_sizes).T
