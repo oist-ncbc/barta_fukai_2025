@@ -1,0 +1,7 @@
+run:
+  learning_rate : 0.
+  simulation_time : 20
+  state_variables : [ge, gi]
+init_matrix : naive
+stimulus : null
+name : fast_train
