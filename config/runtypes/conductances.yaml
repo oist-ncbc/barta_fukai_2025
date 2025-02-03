@@ -4,4 +4,4 @@ run:
   state_variables : [ge, gi]
 init_matrix : naive
 stimulus : null
-name : fast_train
+name : conductances
