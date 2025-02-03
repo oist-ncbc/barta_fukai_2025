@@ -1,6 +1,6 @@
 run:
-  learning_rate : 5.e-3
-  simulation_time : 10
+  learning_rate : 1.e-3
+  simulation_time : 6000
   state_variables : null
 init_matrix : naive
 stimulus : null
