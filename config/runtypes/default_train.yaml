@@ -4,4 +4,5 @@ run:
   state_variables : null
 init_matrix : naive
 stimulus : null
-name : fast_train
+name : train
+save_matrix: True

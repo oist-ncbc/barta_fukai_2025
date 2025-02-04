@@ -12,10 +12,12 @@ from utils import *
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('results', type=str, help='results file')
     parser.add_argument('--plast', type=str)
     parser.add_argument('--patterns', type=int)
     parser.add_argument('--prefix', type=str)
     parser.add_argument('--suffix', type=str, default='')
+
 
     args = parser.parse_args()
 
@@ -32,11 +34,12 @@ if __name__ == '__main__':
         suffix = '_' + args.suffix
     else:
         suffix = ''
-
+        
     # ----------------- STIMULUS -----------------
 
     # res_file = f'data/trained_{plast}_nonburst{npat}_results_stim.pkl'
-    res_file = f'{path}/data/trained_{plast}_{args.prefix}{npat}_results_state{underscore(args.suffix)}.pkl'
+    # res_file = f'{path}/data/trained_{plast}_{args.prefix}{npat}_results_state{underscore(args.suffix)}.pkl'
+    res_file = f'{path}/data/{args.results}.pkl'
 
     with open(res_file, 'rb') as file:
         results_state = pickle.load(file)
@@ -52,7 +55,7 @@ if __name__ == '__main__':
                robust_cov.covariance_[1, 1], robust_cov.covariance_[1, 0]]
         cond_data.append(res)
 
-    pd.DataFrame(cond_data, columns=['mean_e', 'mean_i', 'var_e', 'var_i', 'cov']).to_csv(f'config/var_data_{plast}_{args.prefix}{npat}{suffix}_e.csv', index=False)
+    pd.DataFrame(cond_data, columns=['mean_e', 'mean_i', 'var_e', 'var_i', 'cov']).to_csv(f'data/var_stats/{args.results}_e.csv', index=False)
 
     cond_data = []
 
@@ -64,4 +67,4 @@ if __name__ == '__main__':
                robust_cov.covariance_[1, 1], robust_cov.covariance_[1, 0]]
         cond_data.append(res)
 
-    pd.DataFrame(cond_data, columns=['mean_e', 'mean_i', 'var_e', 'var_i', 'cov']).to_csv(f'config/var_data_{plast}_{args.prefix}{npat}{suffix}_i.csv', index=False)
+    pd.DataFrame(cond_data, columns=['mean_e', 'mean_i', 'var_e', 'var_i', 'cov']).to_csv(f'data/var_stats/{args.results}_i.csv', index=False)

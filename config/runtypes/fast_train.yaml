@@ -5,3 +5,4 @@ run:
 init_matrix : naive
 stimulus : null
 name : fast_train
+save_matrix: True

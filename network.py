@@ -418,7 +418,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
                 n_state = int(state_subset * N_exc)
                 subset_ix = np.random.permutation(N_exc)[:n_state]
 
-            state_monitors = [StateMonitor(G_exc[:10], state_variables, record=True), StateMonitor(G_inh[:1], state_variables, record=True)]
+            state_monitors = [StateMonitor(G_exc[:], state_variables, record=True), StateMonitor(G_inh[:], state_variables, record=True)]
             net.add(state_monitors)
 
         if report:
@@ -469,6 +469,8 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
                         n_neurons = N_exc
                     elif ei == 'inh':
                         n_neurons = N_inh
+
+                    print(ei, n_neurons)
 
                     results[f'state_{ei}'][variable] = variable_full_data.reshape((-1,10,n_neurons)).mean(axis=1)
                     print(results[f'state_{ei}'][variable].shape, results[f'state_{ei}'][variable].mean())

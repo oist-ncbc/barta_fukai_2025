@@ -11,7 +11,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
                 simulation_time, learning_rate, varstats_e, varstats_i, plast_ie=False, plast_ee=False, report=True, state_variables=None,
                 state_subset=0.1, N_exc=8000, alpha1=True, alpha2=2, reset_potential=False, target_rate_std=0,
                 target_distr='lognorm',
-                thresholds=None, seed_num=42, tau_stdp_ms=20, meta_eta=0, exc_stim=False, inh_stim=False, stim_count=500):
+                thresholds=None, seed_num=42, tau_stdp_ms=20, meta_eta=0, exc_stim=False, inh_stim=False, stim_count=500, recharge=0, stimuli=None):
     """
     Run network of neurons with or without inhibitory plasticity.
     :param Z: connection matrix with weights in nS
@@ -313,7 +313,7 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
 
     return results
 
-def run_n_save(simulation_params, args, matrix_file):
+def run_n_save(simulation_params, args, matrix_file, output, matrix_out):
     results = run_network(**simulation_params)
 
     results['params'] = vars(args)
@@ -326,16 +326,16 @@ def run_n_save(simulation_params, args, matrix_file):
     with open(matrix_file, 'rb') as file:
         Z, N_exc, patterns, exc_alpha, delays, _ = pickle.load(file)
 
-    if args.matrix is not None:
+    if matrix_out is not None:
         Z_new, delays_new = update_matrix(Z, N_exc, delays, results['weights'],
                                           plast_ie=simulation_params['plast_ie'],
                                           plast_ee=simulation_params['plast_ee'])
 
-        with open(args.matrix, 'wb') as file:
+        with open(matrix_out, 'wb') as file:
             savetuple = (Z_new, N_exc, patterns, exc_alpha, delays_new, vars(args))
             pickle.dump(savetuple, file)
 
-    with open(args.output, 'wb') as file:
+    with open(output, 'wb') as file:
         pickle.dump(results, file)
 
 

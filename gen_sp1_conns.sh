@@ -1,0 +1,14 @@
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm700.pkl --pattern_sparsity 0.01 --patterns 700 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm800.pkl --pattern_sparsity 0.01 --patterns 800 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm900.pkl --pattern_sparsity 0.01 --patterns 900 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm1000.pkl --pattern_sparsity 0.01 --patterns 1000 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm1100.pkl --pattern_sparsity 0.01 --patterns 1100 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm1200.pkl --pattern_sparsity 0.01 --patterns 1200 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm1300.pkl --pattern_sparsity 0.01 --patterns 1300 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm1400.pkl --pattern_sparsity 0.01 --patterns 1400 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm1500.pkl --pattern_sparsity 0.01 --patterns 1500 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm1600.pkl --pattern_sparsity 0.01 --patterns 1600 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm1700.pkl --pattern_sparsity 0.01 --patterns 1700 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm1800.pkl --pattern_sparsity 0.01 --patterns 1800 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm1900.pkl --pattern_sparsity 0.01 --patterns 1900 --i_sparse 0.1
+python genconn.py -o /flash/FukaiU/tomasbarta/struct_inh_data/sp1/connectivity/lognorm2000.pkl --pattern_sparsity 0.01 --patterns 2000 --i_sparse 0.1

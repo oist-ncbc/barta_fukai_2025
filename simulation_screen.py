@@ -3,9 +3,13 @@ import yaml
 import subprocess
 
 
-def run_locally(screen, python, log_file):
-    """Runs the script locally inside a screen session and logs errors."""
-    command = ["screen", "-dmS", screen, "bash", "-c", f"{python} > {log_file} 2>&1"]
+def run_locally(screen, python, log_file, conda_env="StructuredInhibition"):
+    """Runs the script locally inside a screen session with a Conda environment and logs errors."""
+    command = [
+        "screen", "-dmS", screen, "bash", "-c",
+        f"source ~/.bashrc && conda init bash && conda activate {conda_env} && {python} > {log_file} 2>&1"
+    ]
+
     print(f"Running locally: {' '.join(command)}")
 
     try:
@@ -33,6 +37,7 @@ if __name__ == '__main__':
     parser.add_argument('--system', type=str, required=True)
     parser.add_argument('--run', type=str, required=True)
     parser.add_argument('--patterns', type=int, required=True)
+    parser.add_argument('--isolate', type=str, default=None)
     parser.add_argument('--ssh', type=str, default=None)
 
     args = parser.parse_args()
@@ -48,7 +53,12 @@ if __name__ == '__main__':
     
     bashrc = 'source ~/.bashrc'
     conda = 'conda activate StructuredInhibition'
-    python = f'python simulation.py --system {args.system} --run {args.run} --patterns {args.patterns}'
+
+    if args.isolate is not None:
+        python = f'python simulation.py --system {args.system} --run {args.run} --patterns {args.patterns} --isolate {args.isolate}'
+    else:
+        python = f'python simulation.py --system {args.system} --run {args.run} --patterns {args.patterns}'
+
     exit_screen = 'exit'
     command = ' && '.join([bashrc, conda, python, exit_screen])
 
