@@ -3,6 +3,10 @@ from tqdm import tqdm
 from itertools import combinations, product
 import argparse
 import pickle
+import h5py
+from scipy.sparse import csr_array
+
+from utils import create_weight_dataset
 
 
 def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True,
@@ -137,7 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('--circular', action='store_true')
     parser.add_argument('--fix_size', action='store_true')
     parser.add_argument('--ee_sparse', type=float, default=0.05)
-    parser.add_argument('--i_sparse', type=float, default=0.3)
+    parser.add_argument('--i_sparse', type=float, default=0.1)
     parser.add_argument('--i_factor', type=float, default=1)
     parser.add_argument('-o', '--output', type=str, default='')
     parser.add_argument('--var', type=float, default=1)
@@ -155,5 +159,47 @@ if __name__ == '__main__':
 
     delays_tuple, exc_alpha = get_aux_prop(Z)
 
-    with open(args.output, 'wb') as file:
-        pickle.dump((Z, N_exc, patterns, exc_alpha, delays_tuple, vars(args)), file)
+    csr_patterns = csr_array(patterns) 
+
+    limits = {
+        'E': (0,8000),
+        'I': (8000,10000)
+    }
+
+    with h5py.File(args.output, "w") as h5f:  # Open file in append mode
+        weights_group = h5f.require_group("weights")  # Ensure "weights" group exists
+
+        for pre in ['E','I']:
+            for post in ['E','I']:
+                cut = Z[limits[post][0]:limits[post][1], limits[pre][0]:limits[pre][1]].T
+                sources, targets = np.nonzero(cut)
+                weights = cut[cut != 0]
+
+                label = f'{post}{pre}'
+                create_weight_dataset(weights_group.require_group(label), "sources", sources, dtype=np.uint16)
+                create_weight_dataset(weights_group.require_group(label), "targets", targets, dtype=np.uint16)
+                create_weight_dataset(weights_group.require_group(label), "weights", weights)
+                
+
+        create_weight_dataset(h5f, 'exc_alpha', exc_alpha)
+
+        delays_group = h5f.require_group('delays')
+        create_weight_dataset(delays_group, "EE", delays_tuple[0], dtype=np.float32)
+        create_weight_dataset(delays_group, "IE", delays_tuple[1], dtype=np.float32)
+        create_weight_dataset(delays_group, "II", delays_tuple[2], dtype=np.float32)
+        create_weight_dataset(delays_group, "EI", delays_tuple[3], dtype=np.float32)
+
+        patterns_group = h5f.require_group('patterns')
+        create_weight_dataset(patterns_group, "indices", csr_patterns.indices)
+        create_weight_dataset(patterns_group, "splits", csr_patterns.indptr[1:-1])
+
+        h5f.attrs['N_exc'] = N_exc
+        h5f.attrs['N_inh'] = args.neurons - N_exc
+
+
+    # ZEE = Z[:N_exc,:N_exc].T
+    # sources, targets = np.nonzero(ZEE)
+    # weights = ZEE[ZEE != 0]
+
+    # with open(args.output, 'wb') as file:
+    #     pickle.dump((Z, N_exc, patterns, exc_alpha, delays_tuple, vars(args)), file)

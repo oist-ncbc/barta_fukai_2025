@@ -5,11 +5,12 @@ import subprocess
 
 def run_locally(screen, python, log_file, conda_env="StructuredInhibition"):
     """Runs the script locally inside a screen session with a Conda environment and logs errors."""
-    command = [
-        "screen", "-dmS", screen, "bash", "-c",
-        f"source ~/.bashrc && conda init bash && conda activate {conda_env} && {python} > {log_file} 2>&1"
-    ]
-
+    # command = [
+    #     "screen", "-S", screen, "bash", "-c",
+    #     f"'source ~/miniconda3/etc/profile.d/conda.sh && conda activate {conda_env} && {python} > {log_file} 2>&1 && exec bash'"
+    # ]
+    command = ["screen", "-dmS", screen, "bash", "-l", "-c",
+               f"source ~/miniconda3/etc/profile.d/conda.sh && conda activate StructuredInhibition && {python} > {log_file} 2>&1"]
     print(f"Running locally: {' '.join(command)}")
 
     try:
@@ -19,7 +20,7 @@ def run_locally(screen, python, log_file, conda_env="StructuredInhibition"):
 
 def run_on_ssh(screen, python, log_file, server_address, remote_folder):
     """Runs the script remotely inside a screen session and logs errors."""
-    ssh_command = f"cd {remote_folder} && screen -dmS {screen} bash -c 'source ~/.bashrc && conda init bash && conda activate StructuredInhibition && {python} > {log_file} 2>&1'"
+    ssh_command = f"cd {remote_folder} && screen -dmS {screen} bash -c 'source ~/.bashrc && conda activate StructuredInhibition && {python} > {log_file} 2>&1'"
     full_command = ["ssh", server_address, ssh_command]
 
     print(f"Running on SSH: {' '.join(full_command)}")

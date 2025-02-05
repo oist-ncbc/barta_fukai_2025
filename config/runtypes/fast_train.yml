@@ -1,8 +1,8 @@
 run:
   learning_rate : 5.e-3
-  simulation_time : 10
+  simulation_time : 200
   state_variables : null
+  save_weights : True
 init_matrix : naive
 stimulus : null
 name : fast_train
-save_matrix: True

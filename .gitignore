@@ -12,12 +12,13 @@ __pycache__/
 .env/
 .virtual_documents/
 
-# Ignore logs and debug outputs
+# Ignore logs, debug outputs, and hdf5 files
 logs/
 *.log
 *.out
 *.err
 *.bak
+*.h5
 
 # Ignore generated files
 *.tmp

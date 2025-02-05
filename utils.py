@@ -46,3 +46,14 @@ def lognorm_randvar(mean, sigma, size):
 
 def sortby(x, key):
     return np.sort(x)[np.argsort(np.argsort(key))]
+
+# Function to create dataset with the correct shape
+def create_weight_dataset(group, name, data, dtype=None):
+    """Creates a dataset with the correct shape based on the input data."""
+    group.require_dataset(
+        name,
+        shape=(data.shape[0],),  # Set shape dynamically based on data size
+        maxshape=(None,),  # Allow expansion
+        dtype=dtype if dtype else data.dtype,  # Use given dtype or infer from data
+        compression="gzip"  # Enable compression
+    )[:] = data  # Assign data after creation

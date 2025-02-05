@@ -1,9 +1,9 @@
 run:
   learning_rate: 0.
-  stim_count: 10
+  stim_count: 100
   state_variables: null
   simulation_time: null
-init_matrix: hebb_train1000
+init_matrix: hebb_fast_train1000
 stimulus: null
 name: perturbation
 save_matrix: False
