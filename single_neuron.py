@@ -1,5 +1,7 @@
 from brian2 import *
 import numpy as np
+import h5py
+from tqdm import tqdm
 import argparse
 import pickle
 import pandas as pd
@@ -11,7 +13,8 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
                 simulation_time, learning_rate, varstats_e, varstats_i, plast_ie=False, plast_ee=False, report=True, state_variables=None,
                 state_subset=0.1, N_exc=8000, alpha1=True, alpha2=2, reset_potential=False, target_rate_std=0,
                 target_distr='lognorm',
-                thresholds=None, seed_num=42, tau_stdp_ms=20, meta_eta=0, exc_stim=False, inh_stim=False, stim_count=500, recharge=0, stimuli=None):
+                thresholds=None, seed_num=42, tau_stdp_ms=20, meta_eta=0, exc_stim=False, inh_stim=False, stim_count=500, recharge=0, stimuli=None,
+                output_file=None):
     """
     Run network of neurons with or without inhibitory plasticity.
     :param Z: connection matrix with weights in nS
@@ -75,27 +78,34 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
 
     # Perturbative input
     #________________________
-    input_arr_exc = np.zeros(5)
-    input_arr_inh = np.zeros(5)
-    pair = np.array([1]+[0]*4)
+
+    stim_steps = 5
+    init_steps = stim_steps
+    step_time = 0.1
+
+    input_arr_exc = np.zeros(init_steps)
+    input_arr_inh = np.zeros(init_steps)
+    pair = np.array([1]+[0]*(stim_steps-1))
 
     # input_list = np.arange(0, 1, 0.1) - 0.45
     input_list = np.linspace(-0.35, 0.35, 8)
+
+    stim_time = stim_steps * len(input_list) * step_time
 
     if exc_stim:
         for ii in range(stim_count):
             for inp in input_list:
                 input_arr_exc = np.append(input_arr_exc, pair*inp)
-                input_arr_inh = np.append(input_arr_inh, np.zeros(5))
+                input_arr_inh = np.append(input_arr_inh, np.zeros(stim_steps))
 
     if inh_stim:
         for ii in range(stim_count):
             for inp in input_list:
                 input_arr_inh = np.append(input_arr_inh, pair*inp)
-                input_arr_exc = np.append(input_arr_exc, np.zeros(5))
+                input_arr_exc = np.append(input_arr_exc, np.zeros(stim_steps))
 
-    gext = TimedArray(input_arr_exc * nS, dt=0.1*second)
-    gext_inh = TimedArray(input_arr_inh * nS, dt=0.1*second)
+    gext = TimedArray(input_arr_exc * nS, dt=step_time*second)
+    gext_inh = TimedArray(input_arr_inh * nS, dt=step_time*second)
 
     # Neural model equations
 
@@ -173,19 +183,19 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     G_exc.mu_i = varstats_e['mean_i'].values * nS
     sig_e = np.sqrt(varstats_e['var_e'].values)
     sig_i = np.sqrt(varstats_e['var_i'].values)
-    rho = varstats_e['cov'].values / (sig_e*sig_i)
+    pearsonr = varstats_e['cov'].values / (sig_e*sig_i)
     G_exc.sigma_e = sig_e * nS
     G_exc.sigma_i = sig_i * nS
-    G_exc.rho = rho
+    G_exc.rho = pearsonr
 
     G_inh.mu_e = varstats_i['mean_e'].values * nS
     G_inh.mu_i = varstats_i['mean_i'].values * nS
     sig_e = np.sqrt(varstats_i['var_e'].values)
     sig_i = np.sqrt(varstats_i['var_i'].values)
-    rho = varstats_i['cov'].values / (sig_e*sig_i)
+    pearsonr = varstats_i['cov'].values / (sig_e*sig_i)
     G_inh.sigma_e = sig_e * nS
     G_inh.sigma_i = sig_i * nS
-    G_inh.rho = rho
+    G_inh.rho = pearsonr
 
     if alpha1 is True:
         G_exc.a1 = (exc_alpha * 0.25 + 2) * mV  # exc_alpha needs to be supplied to ensure reproducibility
@@ -216,102 +226,50 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     G_inh.basethr = omega
     # ________________
 
-    # # Initiate background input
-    # # _________________________________
-    # P1 = PoissonInput(G_exc, 'ge', 1000, background_poisson * Hz, weight=poisson_amplitude * nS)
-    # P2 = PoissonInput(G_inh, 'ge', 1000, background_poisson * Hz, weight=poisson_amplitude * nS)
-    # # _________________________________
-
-    # # Input perturbation
-    # # ___________________________
-    #
-    # input_arr = np.zeros(10)
-    # pair = np.array([1]+[0]*9)
-    #
-    # input_list = np.arange(0, 1, 0.1) - 0.45
-    #
-    # for inp in input_list:
-    #     input_arr = np.append(input_arr, pair*inp)
-    #
-    # ta = TimedArray(input_arr * kHz, dt=0.1*second)
-    # G_ext_exc = PoissonGroup(N_exc, rates='ta(t)')
-    # G_ext_inh = PoissonGroup(N_inh, rates='ta(t)')
-    #
-    # Syn_ext_exc = Synapses(G_ext_exc, G_exc, model='w : 1', on_pre='ge += w*nS')
-    # Syn_ext_inh = Synapses(G_ext_inh, G_inh, model='w : 1', on_pre='ge += w*nS')
-    #
-    # Syn_ext_exc.w = poisson_amplitude
-    # Syn_ext_inh.w = poisson_amplitude
-    #
-    # # ___________________________
-
     # Run simulation
     # __________________________
 
+
     net = Network(collect())
 
-    default_units = {
-        'v': mV,
-        'Isyn': nA,
-        'ge': nS,
-        'gi': nS,
-        'y': 1,
-        'theta': mV,
-        'x': 1,
-        'b_dec': 1,
-        'b_mon': 1
-    }
+    init_run_time = init_steps * step_time
+    net.run(init_run_time * second)
+    total_run_time = init_run_time
 
-    spike_monitors = [SpikeMonitor(G_exc), SpikeMonitor(G_inh)]
-    net.add(spike_monitors)
+    with h5py.File(output_file, "w") as h5f:
+        h5f.create_dataset("spikes_exc", (0, 2), maxshape=(None, 2), dtype="float32")  
+        h5f.create_dataset("spikes_inh", (0, 2), maxshape=(None, 2), dtype="float32")
 
-    if state_variables is not None:
-        print(state_variables)
-        # define subset of neurons with state being recorded
-        if type(state_subset) == float:
-            n_state = int(state_subset * N_exc)
-            subset_ix = np.random.permutation(N_exc)[:n_state]
+    # Run simulation in chunks
+    for i in tqdm(range(stim_count)):
+        spikes_exc_mon = SpikeMonitor(G_exc)
+        spikes_inh_mon = SpikeMonitor(G_inh)
+        net.add(spikes_exc_mon, spikes_inh_mon)  # Add only *once*
+        
+        net.run(stim_time * second)  # Run one chunk
+        total_run_time += stim_time
 
-        state_monitors = [StateMonitor(G_exc[:], state_variables, record=True)]
-        net.add(state_monitors)
+        # Fetch spikes
+        exc_spikes = np.column_stack((spikes_exc_mon.i, spikes_exc_mon.t / second))
+        inh_spikes = np.column_stack((spikes_inh_mon.i, spikes_inh_mon.t / second))
 
-    if report:
-        report_status = 'stderr'
-    else:
-        report_status = None
+        # Append to HDF5
+        with h5py.File(output_file, "a") as h5f:
+            h5f["spikes_exc"].resize((h5f["spikes_exc"].shape[0] + exc_spikes.shape[0]), axis=0)
+            h5f["spikes_exc"][-exc_spikes.shape[0]:] = exc_spikes
 
+            h5f["spikes_inh"].resize((h5f["spikes_inh"].shape[0] + inh_spikes.shape[0]), axis=0)
+            h5f["spikes_inh"][-inh_spikes.shape[0]:] = inh_spikes
 
-    simulation_time = len(input_arr_exc) * 0.1 * second
-    net.run(simulation_time, report=report_status)
+            h5f.attrs["simulation_time"] = total_run_time
+
+        # Delete monitors
+        del spikes_exc_mon
+        del spikes_inh_mon
 
     # __________________________
 
-    results = {'spikes': {
-        'exc': (np.array(spike_monitors[0].i), np.array(spike_monitors[0].t / second)),
-        'inh': (np.array(spike_monitors[1].i), np.array(spike_monitors[1].t / second))
-    }, 'weights': {}}
-
-    if meta_eta > 0:
-        results['target_rates'] = np.array(G_exc.neuron_target_rate)
-
-    if plasticity == 'threshold':
-        results['thresholds'] = np.array(G_exc.basethr / mV)
-
-    if state_variables is not None:
-        results['state'] = {}
-
-        # import pdb;pdb.set_trace()
-
-        for variable in state_variables:
-            variable_full_data = np.array(
-                state_monitors[0].get_states([variable])[variable] / default_units[variable])
-            print(variable_full_data.mean())
-            results['state'][variable] = variable_full_data.reshape((-1, 10, 8000)).mean(axis=1)
-            print(results['state'][variable].mean())
-
-    results['simulation_time'] = np.array(simulation_time / second)
-
-    return results
+    print("Simulation complete.")
 
 def run_n_save(simulation_params, args, matrix_file, output, matrix_out):
     results = run_network(**simulation_params)

@@ -4,7 +4,7 @@ import pickle
 from pandas import read_csv
 
 from network import run_n_save, load_stim_file
-from single_neuron import run_n_save as sn_run_n_save
+from single_neuron import run_network as sn_run
 
 
 if __name__ == '__main__':
@@ -89,6 +89,10 @@ if __name__ == '__main__':
         simulation_params['varstats_e'] = varstats_e
         simulation_params['varstats_i'] = varstats_i
 
-        sn_run_n_save(simulation_params, args, matrix_file=matrix_file, output=output_file, matrix_out=matrix_out)
+        output_file = f"{folder_path}/data/{system['name']}_{run['name']}{args.patterns}.h5"
+
+        simulation_params['output_file'] = output_file
+
+        sn_run(**simulation_params)
     else:
         run_n_save(simulation_params, args, matrix_file=matrix_file, output=output_file, matrix_out=matrix_out)
