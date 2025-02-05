@@ -3,7 +3,7 @@ import yaml
 import pickle
 from pandas import read_csv
 
-from network import run_n_save, load_stim_file
+from network_ch import run_network, load_stim_file
 from single_neuron import run_network as sn_run
 
 
@@ -35,12 +35,12 @@ if __name__ == '__main__':
     else:
         matrix_file = f"{folder_path}/connectivity/{run['init_matrix']}_matrix.pkl"
 
-    output_file = f"{folder_path}/data/{system['name']}_{run['name']}{args.patterns}.pkl"
+    output_file = f"{folder_path}/data/{system['name']}_{run['name']}{args.patterns}.h5"
 
-    if run['save_matrix']:
-        matrix_out = f"{folder_path}/connectivity/{system['name']}_{run['name']}{args.patterns}_matrix.pkl"
-    else:
-        matrix_out = None
+    # if run['save_matrix']:
+    #     matrix_out = f"{folder_path}/connectivity/{system['name']}_{run['name']}{args.patterns}_matrix.pkl"
+    # else:
+    #     matrix_out = None
 
     with open(matrix_file, 'rb') as file:
         matrix = dict()
@@ -72,6 +72,7 @@ if __name__ == '__main__':
         **system['neuron'],
         **run['run'],
         stimuli=stimulus_tuples,
+        output_file=output_file
     )
 
     if args.isolate:
@@ -89,10 +90,6 @@ if __name__ == '__main__':
         simulation_params['varstats_e'] = varstats_e
         simulation_params['varstats_i'] = varstats_i
 
-        output_file = f"{folder_path}/data/{system['name']}_{run['name']}{args.patterns}.h5"
-
-        simulation_params['output_file'] = output_file
-
         sn_run(**simulation_params)
     else:
-        run_n_save(simulation_params, args, matrix_file=matrix_file, output=output_file, matrix_out=matrix_out)
+        run_network(**simulation_params)
