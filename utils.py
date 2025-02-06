@@ -1,4 +1,5 @@
 import numpy as np
+import h5py
 
 
 def despine_ax(ax, where=None, remove_ticks=None):
@@ -57,3 +58,32 @@ def create_weight_dataset(group, name, data, dtype=None):
         dtype=dtype if dtype else data.dtype,  # Use given dtype or infer from data
         compression="gzip"  # Enable compression
     )[:] = data  # Assign data after creation
+
+def load_connectivity(filename):
+    connectivity = {}
+    weights = {}
+    delays = {}
+
+    connectivity['weights'] = weights
+    connectivity['delays'] = delays
+
+    with h5py.File(filename, "r") as h5f:
+        print(list(h5f.keys()))
+
+        for pre in ['E','I']:
+            for post in ['E','I']:
+                label = f'{post}{pre}'
+
+                delays[label] = h5f[f'delays/{label}'][:]
+
+                weights[label] = {
+                    'weights' : h5f[f'weights/{label}/weights'][:],
+                    'sources' : h5f[f'weights/{label}/sources'][:],
+                    'targets' : h5f[f'weights/{label}/targets'][:],
+                }
+
+        connectivity['exc_alpha'] = h5f['exc_alpha'][:]
+        connectivity['N_exc'] = h5f.attrs['N_exc']
+        connectivity['N_inh'] = h5f.attrs['N_inh']
+
+    return connectivity

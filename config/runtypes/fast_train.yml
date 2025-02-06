@@ -1,8 +1,8 @@
 run:
-  learning_rate : 5.e-3
-  simulation_time : 200
+  learning_rate : 3.e-3
+  simulation_time : 500
   state_variables : null
   save_weights : True
-init_matrix : naive
+init_matrix : data/lognorm1000.h5
 stimulus : null
 name : fast_train

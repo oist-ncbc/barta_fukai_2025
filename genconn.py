@@ -10,7 +10,7 @@ from utils import create_weight_dataset
 
 
 def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True,
-            var_factor=1, fix_size=False, spread=0, seed=42):
+            var_factor=0.5, fix_size=False, spread=0, seed=42):
     """
     Generate connectivity matrix by calculating Hebbian terms in EE connectivity, selecting the highest ones
     and overlaying lognormal weight distribution.
@@ -76,7 +76,7 @@ def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True,
     Z_slice[Z_slice < limit] = 0
     weights_ee = (Z[:N_exc,:N_exc][Z[:N_exc,:N_exc] != 0])
 
-    E = 0.5
+    E = 0.25
     Var = E*var_factor
 
     sig = np.sqrt(np.log(Var/(E*E) + 1))
@@ -102,6 +102,10 @@ def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True,
         for ii in range(N_exc):
             factor = np.exp((pattern_participation[ii] - P*f) / P*f)
             Z[:,ii] = Z[:,ii] / factor
+
+    Z[N_exc:,N_exc:] = Z[N_exc:,N_exc:] * 6
+    Z[:N_exc,N_exc:] = Z[:N_exc,N_exc:] * 2
+    Z[N_exc:,:N_exc] = Z[N_exc:,:N_exc] * 2
 
     # if rescale:
     #     for i in tqdm(range(N_exc)):
@@ -144,7 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('--i_sparse', type=float, default=0.1)
     parser.add_argument('--i_factor', type=float, default=1)
     parser.add_argument('-o', '--output', type=str, default='')
-    parser.add_argument('--var', type=float, default=1)
+    parser.add_argument('--var', type=float, default=0.5)
     parser.add_argument('--spread', type=float, default=0)
 
     args = parser.parse_args()
@@ -195,6 +199,7 @@ if __name__ == '__main__':
 
         h5f.attrs['N_exc'] = N_exc
         h5f.attrs['N_inh'] = args.neurons - N_exc
+        h5f.attrs['N_patterns'] = args.patterns
 
 
     # ZEE = Z[:N_exc,:N_exc].T

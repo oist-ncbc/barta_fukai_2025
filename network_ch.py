@@ -18,46 +18,140 @@ def get_stim_matrix(stimuli, N_exc, simulation_time, dt=0.1):
 
     return stim_matrix
 
-def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisson, poisson_amplitude,
-                simulation_time, learning_rate, plast_ie=False, plast_ee=False, report=True, state_variables=None, state_subset=0.1,
-                stimuli=None, N_exc=8000, alpha1=True, alpha2=2, reset_potential=False, target_rate_std=0, target_distr='lognorm',
-                thresholds=None, seed_num=42, tau_stdp_ms=20, meta_eta=0, chunks=None, recharge=0, output_file=None, save_weights=False):
+def ei_plasticity_eqs(plasticity, learning_rate):
+    if learning_rate > 0:
+        if plasticity == 'rate':
+            pre_eqs_inh = '''
+                    gi += w*nS
+                    w = w + learning_rate * (network_rate-target_rate) * (x_post + 1)'''
+
+            post_eqs_inh = '''
+                    w = w + learning_rate * (network_rate-target_rate) * x_pre'''
+
+        elif plasticity == 'hebb':
+            pre_eqs_inh = '''
+                    gi += w*nS
+                    alpha = neuron_target_rate_post*Hz*tau_stdp*2
+                    w = clip(w+(x_post-alpha)*learning_rate, 0, 100)'''
+
+            post_eqs_inh = '''
+                    w = clip(w+x_pre*learning_rate, 0, 100)'''
+
+        elif plasticity == 'idip':
+            pre_eqs_inh = '''
+                    gi += w*nS
+                    w = clip(w+(y_pre-17)*learning_rate, 0, 100)'''
+            post_eqs_inh = None
+        elif plasticity == 'threshold':
+            pre_eqs_inh = '''
+                    gi += w*nS
+            '''
+            post_eqs_inh = None
+        else:
+            raise ValueError(f"plasticity can be 'threshold', 'rate', 'hebb', or 'idip'. Received '{plasticity}' instead.")
+    else:
+            pre_eqs_inh = '''
+                    gi += w*nS
+            '''
+            post_eqs_inh = None
+    
+    return pre_eqs_inh, post_eqs_inh
+
+def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_potential,
+                target_rate, plasticity, background_poisson, poisson_amplitude, output_file,
+                simulation_time, learning_rate, state_variables=None, stimuli=None,
+                thresholds=None, seed_num=42, tau_stdp_ms=20, recharge=0, save_weights=False):
     """
-    Run network of neurons with or without inhibitory plasticity.
-    :param Z: connection matrix with weights in nS
-    :param exc_alpha: vector of length N_exc containing the alpha1 parameters for excitatory neurons
-    :param delays: tuple of 4 vectors with synaptic delays (delays_ee, delays_ie, delays_ii, delays_ei)
-    :param target_rate: can be either scalar for all neurons, or an array of length N_exc
-    :param plasticity: if 'hebb', Hebbian learning is used. if 'rate', heterosynaptic learning rule is used
-        to achieve the desired firing rate. if 'idip', learning rule to equalize mean excitatory input to a neuron
-        is used. if 'threshold', the threshold of each neuron is modified until desired firing rate is achieved
-    :param background_poisson: background input rate in kHz. received by both excitatory and inhibitory populations
-    :param poisson_amplitude: amplitude of background input spikes in nS
-    :param simulation_time: total simulation time in seconds
-    :param learning_rate: inhibitory plasticity learning rate
-    :param plast_ie: if exc to inh plasticity should be turned on
-    :param plast_ee: if exc to exc plasticity should be turned on
-    :param report: whether progress should be printed out during simulation
-    :param state_variables: either None (default), or a list of variables that should be recorded
-    :param state_subset: if float, given fraction of neurons is selected by random.
-        if a list of indexes (<N_exc), specified subset is recorded.
-    :param stimuli: list of tuples in the format (stimulus start, stimulus end, subset of stimulated neurons)
-    :param N_exc: number of excitatory neurons
-    :param alpha2: MAT parameter for slow adaptation of neurons
-    :param reset_potential: whether membrane potential should be reset to EL when a spike is fired
-    :param target_rate_std: standard deviation of target rate. if > 0, each neuron will have a different
-        target rate assigned from a log-normal distribution
-    :param target_distr: 'lognorm' or 'gamma' supported for distribution of firing rates
-    :param seed_num: seed for reproducibility
-    :param alpha1: whether short timescale adaptation should be used
-    :param chunks: duration of chunks in seconds in which network is simulated. If None (default), network is simulated
-        in one go
+    Simulates a spiking neural network with customizable plasticity rules and input stimuli.
+
+    The function records spikes, state variables, and synaptic weights directly 
+    into an HDF5 (.h5) file.
+
+    Parameters
+    ----------
+    weights : ndarray
+        Synaptic weight matrix (N_total × N_total) in nanosiemens (nS), where `N_total = N_exc + N_inh`.
+    exc_alpha : ndarray
+        Excitatory adaptation parameter (`alpha1`) for each excitatory neuron, shape (N_exc,).
+    delays : tuple of ndarrays
+        Synaptic delays (in milliseconds) for different connection types:
+        - `delays_ee` : Excitatory → Excitatory
+        - `delays_ie` : Excitatory → Inhibitory
+        - `delays_ii` : Inhibitory → Inhibitory
+        - `delays_ei` : Inhibitory → Excitatory
+    N_exc : int
+        Number of excitatory neurons.
+    N_inh : int
+        Number of inhibitory neurons.
+    alpha1 : bool, default=True
+        Enables or disables short timescale adaptation for excitatory neurons.
+    alpha2 : float, default=2
+        MAT parameter for slow adaptation of neurons (in mV).
+    reset_potential : bool, default=False
+        If `True`, resets the membrane potential to EL after a spike.
+    target_rate : float or ndarray
+        Target firing rate in Hz. Can be:
+        - A scalar applied to all neurons.
+        - An array of shape (N_exc,) specifying individual target rates.
+    plasticity : str
+        Synaptic plasticity rule:
+        - `'hebb'` : Hebbian learning.
+        - `'rate'` : Heterosynaptic plasticity to match target rates.
+        - `'idip'` : Balances excitatory input for homeostasis.
+        - `'threshold'` : Adjusts neuron thresholds to achieve target rate.
+    background_poisson : float
+        Background Poisson input rate (in kHz) applied to all neurons.
+    poisson_amplitude : float
+        Synaptic weight (in nS) of each background Poisson input spike.
+    output_file : str
+        Path to the HDF5 (.h5) file where the simulation results will be stored.
+    simulation_time : float
+        Total simulation duration (in seconds).
+    learning_rate : float
+        Learning rate for inhibitory synaptic plasticity.
+    state_variables : list of str, optional (default: None)
+        List of neuron state variables to record.
+    stimuli : list of tuples, optional (default: None)
+        Each tuple represents a stimulus and follows the format: 
+        `(stimulus start, stimulus end, subset of stimulated neurons)`.
+    thresholds : ndarray, optional (default: None)
+        Initial threshold values for excitatory neurons (if `plasticity='threshold'`).
+    seed_num : int, default=42
+        Random seed for reproducibility.
+    tau_stdp_ms : float, default=20
+        STDP time constant in milliseconds.
+    recharge : int, default=0
+        Determines whether neurons should "recharge" after firing.
+    save_weights : bool, default=False
+        If `True`, saves final synaptic weights to the `.h5` file.
+
+    Returns
+    -------
+    None
+        The function does not return a dictionary of results but saves all relevant data in `output_file`.
+
+    Notes
+    -----
+    - The function **appends to the HDF5 file** if it already exists, avoiding data loss.
+    - Weights are stored in a hierarchical format inside the `"weights"` group.
+    - If `state_variables` is provided, their data is recorded separately for excitatory and inhibitory populations.
+    - If `save_weights=True`, synaptic weights are stored at the end of the simulation.
+
+    Example
+    -------
+    ```python
+    run_network(weights=Z, exc_alpha=alpha, delays=(delays_ee, delays_ie, delays_ii, delays_ei),
+                N_exc=8000, N_inh=2000, alpha1=True, alpha2=2, reset_potential=False,
+                target_rate=5.0, plasticity='hebb', background_poisson=1.5, poisson_amplitude=0.3,
+                output_file="simulation_results.h5", simulation_time=100, learning_rate=0.001,
+                state_variables=['v', 'ge', 'gi'], save_weights=True)
+    ```
     """
+    meta_eta = 0
+
     np.random.seed(seed_num)
 
     defaultclock.dt = 0.1*ms  # set time step to 0.1ms
-
-    N_inh = Z.shape[0] - N_exc  # number of inhibitory neurons
 
     # Neural model parameters
     # _______________________
@@ -237,165 +331,46 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
     Ser.connect(p=1)
 
     Sre.w = (second/tau_rate) / N_exc
+
     # _________________________
 
     # Define E<-I plasticity equations
     # ___________________________________
 
-    eta = learning_rate
-
-    if plasticity == 'rate':
-        pre_eqs_inh = '''
-                 gi += w*nS
-                 w = w + eta * (network_rate-target_rate) * (x_post + 1)'''
-
-        post_eqs_inh = '''
-                 w = w + eta * (network_rate-target_rate) * x_pre'''
-
-    elif plasticity == 'hebb':
-        pre_eqs_inh = '''
-                 gi += w*nS
-                 alpha = neuron_target_rate_post*Hz*tau_stdp*2
-                 w = clip(w+(x_post-alpha)*eta, 0, 100)'''
-
-        post_eqs_inh = '''
-                 w = clip(w+x_pre*eta, 0, 100)'''
-
-    elif plasticity == 'idip':
-        pre_eqs_inh = '''
-                 gi += w*nS
-                 w = clip(w+(y_pre-17)*eta, 0, 100)'''
-        post_eqs_inh = None
-    elif plasticity == 'threshold':
-        pre_eqs_inh = '''
-                gi += w*nS
-        '''
-        post_eqs_inh = None
-    else:
-        raise ValueError(f"plasticity can be 'threshold', 'rate', 'hebb', or 'idip'. Received '{plasticity}' instead.")
-
-    # ___________________________________
-
-    # Define I<-E plasticity equations
-    # ___________________________________
-
-    pre_eqs_ie = '''
-             ge += w*nS
-             w = clip(w-(x_post)*eta, 0, 100)'''
-
-    post_eqs_ie = '''
-              w = clip(w+x_pre*eta, 0, 100)'''
-    # ___________________________________
-
-    # ___________________________________
-
-    # Define E<-E plasticity equations
-    # ___________________________________
-
-    tauhstas = 450*second
-
-    model_ee = '''
-            dw/dt = -w/tauhstas : 1 (event-driven)'''
-
-    pre_eqs_ee = '''
-             ge += w*nS
-             w = clip(w+(x_post)*eta, 0, 100)'''
-
-    post_eqs_ee = '''
-              w = clip(w+x_pre*eta, 0, 100)'''
-    # ___________________________________
-
+    pre_eqs_inh, post_eqs_inh = ei_plasticity_eqs(plasticity, learning_rate)
 
     # Initiate synapses
     # _________________________
-    Sii = Synapses(G_inh, G_inh, model='w : 1', on_pre='gi += w*nS', method='exponential_euler')
 
-    if plast_ee and learning_rate > 0:
-        See = Synapses(G_exc, G_exc, model=model_ee, on_pre=pre_eqs_ee, on_post=post_eqs_ee, method='exponential_euler')
-    else:
-        See = Synapses(G_exc, G_exc, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
-
-    if plast_ie and learning_rate > 0:
-        Sie = Synapses(G_exc, G_inh, model='w : 1', on_pre=pre_eqs_ie, on_post=post_eqs_ie, method='exponential_euler')
-    else:
-        Sie = Synapses(G_exc, G_inh, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
-
-    # only employ plasticity if learning is turned on
-    model = '''
+    model_ei = '''
         w : 1
         alpha : 1
         '''
-    if learning_rate > 0:
-        Sei = Synapses(G_inh, G_exc, model=model, on_pre=pre_eqs_inh, on_post=post_eqs_inh,
-                       method='exponential_euler')
-    else:
-        Sei = Synapses(G_inh, G_exc, model=model, on_pre='gi += w*nS', method='exponential_euler')
 
-    delays_ee, delays_ie, delays_ii, delays_ei = delays
+    Sii = Synapses(G_inh, G_inh, model='w : 1', on_pre='gi += w*nS', method='exponential_euler')
+    See = Synapses(G_exc, G_exc, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
+    Sie = Synapses(G_exc, G_inh, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
+    Sei = Synapses(G_inh, G_exc, model=model_ei, on_pre=pre_eqs_inh, on_post=post_eqs_inh, method='exponential_euler')
 
-    # exc to exc
-    ZEE = Z[:N_exc,:N_exc].T
-    sources, targets = np.nonzero(ZEE)
-    weights = ZEE[ZEE != 0]
-    See.connect(i=sources, j=targets)
-    See.w = weights*0.5
-    See.delay = delays_ee*ms
+    # connect synapses
+    synapses = {
+        'EE': See,
+        'IE': Sie,
+        'EI': Sei,
+        'II': Sii
+    }
 
-    # exc to inh
-    ZIE = Z[N_exc:,:N_exc].T
-    sources, targets = np.nonzero(ZIE)
-    weights = ZIE[ZIE != 0]
-    Sie.connect(i=sources, j=targets)
-    Sie.w = weights
-    Sie.delay = delays_ie*ms
-
-    # inh to exc
-    ZEI = Z[:N_exc,N_exc:].T
-    sources, targets = np.nonzero(ZEI)
-    weights = ZEI[ZEI != 0]
-    Sei.connect(i=sources, j=targets)
-    Sei.w = np.abs(weights)
-    Sei.delay = delays_ei*ms
-
-    if np.isscalar(target_rate):
-        if target_rate_std == 0:
-            alpha_val = target_rate*Hz*tau_stdp*2
-        else:
-            E = target_rate
-            Var = target_rate_std**2
-
-            if target_distr == 'lognorm':
-                sig = np.sqrt(np.log(Var/(E*E) + 1))
-                mu = np.log(E) - sig**2 / 2
-
-                target_rates = np.sort(np.exp(np.random.randn(N_exc)*sig + mu))
-
-            elif target_distr == 'gamma':
-                target_rates = np.sort(np.random.gamma(shape=E**2/(Var), scale=Var/E, size=N_exc))
-
-            alpha_val = target_rates*Hz*tau_stdp*2
-    else:
-        target_rates = np.array(target_rate)
-        alpha_val = target_rates*Hz*tau_stdp*2
-
-    alpha_matrix = (ZEI != 0).astype(float) * alpha_val
-    Sei.alpha = alpha_matrix[ZEI != 0]  # is this necessary?
-
-    # inh to inh
-    ZII = Z[N_exc:,N_exc:].T
-    sources, targets = np.nonzero(ZII)
-    weights = ZII[ZII != 0]
-    Sii.connect(i=sources, j=targets)
-    Sii.w = np.abs(weights)*3
-    Sii.delay = delays_ii*ms
+    for pre in ['E','I']:
+        for post in ['E','I']:
+            label = f'{post}{pre}'
+            synapses[label].connect(i=weights[label]['sources'].astype(int), j=weights[label]['targets'].astype(int))
+            synapses[label].w = weights[label]['weights']
+            synapses[label].delay = delays[label] * ms
 
     # Run simulation
     # __________________________
 
     net = Network(collect())
-
-    chunks = None
-    folder = 'data/'
 
     default_units = {
         'v': mV,
@@ -485,32 +460,6 @@ def run_network(Z, exc_alpha, delays, target_rate, plasticity, background_poisso
                     create_weight_dataset(weights_group.require_group(label), "sources", synapses.i[:], dtype=np.uint16)
                     create_weight_dataset(weights_group.require_group(label), "targets", synapses.j[:], dtype=np.uint16)
                     create_weight_dataset(weights_group.require_group(label), "weights", synapses.w[:])
-
-
-def run_n_save(simulation_params, args, matrix_file, output, matrix_out):
-    results = run_network(**simulation_params)
-
-    results['params'] = vars(args)
-    results['simulation_params'] = simulation_params
-
-    if 'thresholds' in results:
-        with open('data/thresholds.pkl', 'wb') as file:
-            pickle.dump(results['thresholds'], file)
-
-    with open(matrix_file, 'rb') as file:
-        Z, N_exc, patterns, exc_alpha, delays, _ = pickle.load(file)
-
-    if matrix_out is not None:
-        Z_new, delays_new = update_matrix(Z, N_exc, delays, results['weights'],
-                                          plast_ie=simulation_params['plast_ie'],
-                                          plast_ee=simulation_params['plast_ee'])
-
-        with open(matrix_out, 'wb') as file:
-            savetuple = (Z_new, N_exc, patterns, exc_alpha, delays_new, vars(args))
-            pickle.dump(savetuple, file)
-
-    with open(output, 'wb') as file:
-        pickle.dump(results, file)
 
 def load_stim_file(filename, patterns, randstim, fraction=10):
     stims = pd.read_csv(filename, header=None, index_col=False).values[:len(patterns)]

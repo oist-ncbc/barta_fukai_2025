@@ -12,19 +12,22 @@ __pycache__/
 .env/
 .virtual_documents/
 
-# Ignore logs, debug outputs, and hdf5 files
+# Ignore logs, debug outputs, hdf5 and pkl files
 logs/
 *.log
 *.out
 *.err
 *.bak
 *.h5
+*.pkl
+*.zip
 
 # Ignore generated files
 *.tmp
 *.swp
 *.swo
 *.~*
+.DS_Store
 
 # Ignore notebooks and figures
 img/

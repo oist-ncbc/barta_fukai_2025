@@ -5,9 +5,6 @@ neuron :
   tau_stdp_ms : 20
   plasticity : hebb
   recharge : 0
-  plast_ie : False
-  plast_ee : False
-  meta_eta : 0
 background:
   background_poisson : 2
   poisson_amplitude : 0.3

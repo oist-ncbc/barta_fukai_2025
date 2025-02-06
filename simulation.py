@@ -5,6 +5,7 @@ from pandas import read_csv
 
 from network_ch import run_network, load_stim_file
 from single_neuron import run_network as sn_run
+from utils import load_connectivity
 
 
 if __name__ == '__main__':
@@ -28,23 +29,16 @@ if __name__ == '__main__':
     with open('config/server_config.yaml') as f:
         server_config = yaml.safe_load(f)
 
-    folder_path = f"{server_config['data_path']}/{system['folder']}"
+    folder_path = f"{server_config['data_path']}"
 
-    if run['init_matrix'] == 'naive':
-        matrix_file = f"{folder_path}/connectivity/{system['prefix']}{args.patterns}.pkl"
-    else:
-        matrix_file = f"{folder_path}/connectivity/{run['init_matrix']}_matrix.pkl"
-
-    output_file = f"{folder_path}/data/{system['name']}_{run['name']}{args.patterns}.h5"
+    output_file = f"{folder_path}/{system['name']}_{run['name']}{args.patterns}.h5"
 
     # if run['save_matrix']:
     #     matrix_out = f"{folder_path}/connectivity/{system['name']}_{run['name']}{args.patterns}_matrix.pkl"
     # else:
     #     matrix_out = None
 
-    with open(matrix_file, 'rb') as file:
-        matrix = dict()
-        Z, N_exc, patterns, exc_alpha, delays, _ = pickle.load(file)
+    connectivity = load_connectivity(run['init_matrix'])
 
     if type(system['target_rate']) == str:
         with open(system['target_rate'],'rb') as f:
@@ -63,10 +57,7 @@ if __name__ == '__main__':
 
 
     simulation_params = dict(
-        Z=Z,
-        exc_alpha=exc_alpha,
-        delays=delays,
-        N_exc=N_exc,
+        **connectivity,
         target_rate=target_rate,
         **system['background'],
         **system['neuron'],
