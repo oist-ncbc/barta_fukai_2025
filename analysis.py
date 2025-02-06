@@ -5,19 +5,13 @@ import argparse
 import pickle
 
 
-def get_spike_counts(spike_times, spike_indices, t_max, N=8000, dt=0.1, disable_tqdm=False):
-    bins = np.arange(0, t_max+1e-5, dt)
+def get_spike_counts(spike_times, spike_indices, t_max, N=8000, dt=0.1):
+    bins_indices = np.arange(-0.5, N, 1)
+    bins_time = np.arange(0, t_max+dt/10, dt)
 
-    spike_counts = []
+    histdata, *_ = np.histogram2d(spike_indices, spike_times, [bins_indices, bins_time])
 
-    for i in tqdm(range(N), disable=disable_tqdm):
-        neuron_spikes = spike_times[spike_indices == i]
-        counts, bins = np.histogram(np.array(neuron_spikes), bins=bins)
-        spike_counts.append(counts)
-
-    spike_counts = np.array(spike_counts)
-
-    return bins, spike_counts
+    return bins_time, histdata
 
 def get_pattern_activations(spike_counts, patterns):
     activations = []
