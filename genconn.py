@@ -171,7 +171,8 @@ if __name__ == '__main__':
     }
 
     with h5py.File(args.output, "w") as h5f:  # Open file in append mode
-        weights_group = h5f.require_group("weights")  # Ensure "weights" group exists
+        connectivity_group = h5f.require_group("connectivity")
+        weights_group = connectivity_group.require_group("weights")  # Ensure "weights" group exists
 
         for pre in ['E','I']:
             for post in ['E','I']:
@@ -185,21 +186,21 @@ if __name__ == '__main__':
                 create_weight_dataset(weights_group.require_group(label), "weights", weights)
                 
 
-        create_weight_dataset(h5f, 'exc_alpha', exc_alpha)
+        create_weight_dataset(connectivity_group, 'exc_alpha', exc_alpha)
 
-        delays_group = h5f.require_group('delays')
+        delays_group = connectivity_group.require_group('delays')
         create_weight_dataset(delays_group, "EE", delays_tuple[0], dtype=np.float32)
         create_weight_dataset(delays_group, "IE", delays_tuple[1], dtype=np.float32)
         create_weight_dataset(delays_group, "II", delays_tuple[2], dtype=np.float32)
         create_weight_dataset(delays_group, "EI", delays_tuple[3], dtype=np.float32)
 
-        patterns_group = h5f.require_group('patterns')
+        patterns_group = connectivity_group.require_group('patterns')
         create_weight_dataset(patterns_group, "indices", csr_patterns.indices)
         create_weight_dataset(patterns_group, "splits", csr_patterns.indptr[1:-1])
 
-        h5f.attrs['N_exc'] = N_exc
-        h5f.attrs['N_inh'] = args.neurons - N_exc
-        h5f.attrs['N_patterns'] = args.patterns
+        connectivity_group.attrs['N_exc'] = N_exc
+        connectivity_group.attrs['N_inh'] = args.neurons - N_exc
+        connectivity_group.attrs['N_patterns'] = args.patterns
 
 
     # ZEE = Z[:N_exc,:N_exc].T

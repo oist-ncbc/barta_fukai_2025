@@ -68,22 +68,21 @@ def load_connectivity(filename):
     connectivity['delays'] = delays
 
     with h5py.File(filename, "r") as h5f:
-        print(list(h5f.keys()))
-
+        grp = h5f.require_group('connectivity')
         for pre in ['E','I']:
             for post in ['E','I']:
                 label = f'{post}{pre}'
 
-                delays[label] = h5f[f'delays/{label}'][:]
+                delays[label] = grp[f'delays/{label}'][:]
 
                 weights[label] = {
-                    'weights' : h5f[f'weights/{label}/weights'][:],
-                    'sources' : h5f[f'weights/{label}/sources'][:],
-                    'targets' : h5f[f'weights/{label}/targets'][:],
+                    'weights' : grp[f'weights/{label}/weights'][:],
+                    'sources' : grp[f'weights/{label}/sources'][:],
+                    'targets' : grp[f'weights/{label}/targets'][:],
                 }
 
-        connectivity['exc_alpha'] = h5f['exc_alpha'][:]
-        connectivity['N_exc'] = h5f.attrs['N_exc']
-        connectivity['N_inh'] = h5f.attrs['N_inh']
+        connectivity['exc_alpha'] = grp['exc_alpha'][:]
+        connectivity['N_exc'] = grp.attrs['N_exc']
+        connectivity['N_inh'] = grp.attrs['N_inh']
 
     return connectivity

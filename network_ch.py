@@ -385,7 +385,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
     }
 
 
-    with h5py.File(output_file, "w") as h5f:
+    with h5py.File(output_file, "a") as h5f:
         h5f.create_dataset("spikes_exc", (0, 2), maxshape=(None, 2), dtype="float32", chunks=True)
         h5f.create_dataset("spikes_inh", (0, 2), maxshape=(None, 2), dtype="float32", chunks=True)
         
@@ -442,24 +442,29 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
         if save_weights:
             with h5py.File(output_file, "a") as h5f:  # Open file in append mode
-                weights_group = h5f.require_group("weights")  # Ensure "weights" group exists
+                grp = h5f.require_group("connectivity/weights/EI")
 
-                # Function to create dataset with the correct shape
-                def create_weight_dataset(group, name, data, dtype=None):
-                    """Creates a dataset with the correct shape based on the input data."""
-                    group.require_dataset(
-                        name,
-                        shape=(data.shape[0],),  # Set shape dynamically based on data size
-                        maxshape=(None,),  # Allow expansion
-                        dtype=dtype if dtype else data.dtype,  # Use given dtype or infer from data
-                        compression="gzip"  # Enable compression
-                    )[:] = data  # Assign data after creation
+                if "weights" in grp:
+                    del grp["weights"]  # Delete existing dataset before overwriting
+                grp.create_dataset("weights", data=Sei.w[:], compression="gzip")  # Optional compression
+                # weights_group = h5f.require_group("weights")  # Ensure "weights" group exists
 
-                # Create datasets for each weight type
-                for label, synapses in zip(['EE','EI','IE','II'], [See, Sei, Sie, Sii]):
-                    create_weight_dataset(weights_group.require_group(label), "sources", synapses.i[:], dtype=np.uint16)
-                    create_weight_dataset(weights_group.require_group(label), "targets", synapses.j[:], dtype=np.uint16)
-                    create_weight_dataset(weights_group.require_group(label), "weights", synapses.w[:])
+                # # Function to create dataset with the correct shape
+                # def create_weight_dataset(group, name, data, dtype=None):
+                #     """Creates a dataset with the correct shape based on the input data."""
+                #     group.require_dataset(
+                #         name,
+                #         shape=(data.shape[0],),  # Set shape dynamically based on data size
+                #         maxshape=(None,),  # Allow expansion
+                #         dtype=dtype if dtype else data.dtype,  # Use given dtype or infer from data
+                #         compression="gzip"  # Enable compression
+                #     )[:] = data  # Assign data after creation
+
+                # # Create datasets for each weight type
+                # for label, synapses in zip(['EE','EI','IE','II'], [See, Sei, Sie, Sii]):
+                #     create_weight_dataset(weights_group.require_group(label), "sources", synapses.i[:], dtype=np.uint16)
+                #     create_weight_dataset(weights_group.require_group(label), "targets", synapses.j[:], dtype=np.uint16)
+                #     create_weight_dataset(weights_group.require_group(label), "weights", synapses.w[:])
 
 def load_stim_file(filename, patterns, randstim, fraction=10):
     stims = pd.read_csv(filename, header=None, index_col=False).values[:len(patterns)]

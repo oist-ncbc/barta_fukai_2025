@@ -2,6 +2,7 @@ import argparse
 import yaml
 import pickle
 from pandas import read_csv
+import h5py
 
 from network_ch import run_network, load_stim_file
 from single_neuron import run_network as sn_run
@@ -33,12 +34,11 @@ if __name__ == '__main__':
 
     output_file = f"{folder_path}/{system['name']}_{run['name']}{args.patterns}.h5"
 
-    # if run['save_matrix']:
-    #     matrix_out = f"{folder_path}/connectivity/{system['name']}_{run['name']}{args.patterns}_matrix.pkl"
-    # else:
-    #     matrix_out = None
+    with h5py.File(run['init_matrix'], "r") as src, h5py.File(output_file, "w") as dest:
+        # Copy a group from source to destination
+        src.copy("/connectivity", dest)  # Copies to the root of destination
 
-    connectivity = load_connectivity(run['init_matrix'])
+    connectivity = load_connectivity(output_file)
 
     if type(system['target_rate']) == str:
         with open(system['target_rate'],'rb') as f:
