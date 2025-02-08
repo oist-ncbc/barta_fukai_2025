@@ -390,9 +390,12 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         h5f.create_dataset("spikes_inh", (0, 2), maxshape=(None, 2), dtype="float32", chunks=True)
         
         if state_variables is not None:
+            h5f.create_group('state')
+            h5f['state'].create_group('exc')
+            h5f['state'].create_group('inh')
             for variable in state_variables:
-                h5f.create_dataset(f'{variable}_exc', (0,), maxshape=(None,), dtype="float32", chunks=True, compression='gzip')
-                h5f.create_dataset(f'{variable}_inh', (0,), maxshape=(None,), dtype="float32", chunks=True, compression='gzip')
+                h5f['state/exc'].create_dataset(variable, (0,N_exc), maxshape=(None,N_exc), dtype="float32", chunks=True, compression='gzip')
+                h5f['state/inh'].create_dataset(variable, (0,N_inh), maxshape=(None,N_inh), dtype="float32", chunks=True, compression='gzip')
 
     elapsed_time = 0
 
@@ -431,11 +434,11 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
                     variable_exc_data = np.array(state_exc_mon.get_states([variable])[variable] / default_units[variable])
                     variable_inh_data = np.array(state_inh_mon.get_states([variable])[variable] / default_units[variable])
 
-                    h5f[f"{variable}_exc"].resize((h5f["{variable}_exc"].shape[0] + variable_exc_data.shape[0]), axis=0)
-                    h5f[f"{variable}_inh"].resize((h5f["{variable}_inh"].shape[0] + variable_exc_data.shape[0]), axis=0)
+                    h5f[f"state/exc/{variable}"].resize((h5f[f"state/exc/{variable}"].shape[0] + variable_exc_data.shape[0]), axis=0)
+                    h5f[f"state/inh/{variable}"].resize((h5f[f"state/inh/{variable}"].shape[0] + variable_inh_data.shape[0]), axis=0)
 
-                    h5f[f"{variable}_exc"][-variable_exc_data.shape[0]:] = variable_exc_data
-                    h5f[f"{variable}_inh"][-variable_inh_data.shape[0]:] = variable_inh_data
+                    h5f[f"state/exc/{variable}"][-variable_exc_data.shape[0]:] = variable_exc_data
+                    h5f[f"state/inh/{variable}"][-variable_inh_data.shape[0]:] = variable_inh_data
 
                 del state_exc_mon
                 del state_inh_mon

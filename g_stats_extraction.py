@@ -9,6 +9,13 @@ from sklearn.covariance import MinCovDet
 
 from utils import *
 
+
+def robust_estimate(x, y):
+    X = np.array([x, y]).T
+    robust_cov = MinCovDet().fit(X)
+
+    return robust_cov.location_, robust_cov.covariance_
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
