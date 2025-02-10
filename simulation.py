@@ -67,7 +67,7 @@ if __name__ == '__main__':
     )
 
     if 'isolate' in run:
-        var_stats_filename = f'{folder_path}/{system['name']}_conductances{args.patterns}_stats.csv'
+        var_stats_filename = f"{folder_path}/{system['name']}_conductances{args.patterns}_stats.csv"
         run['isolate']['var_stats'] = read_csv(run['isolate']['var_stats'], index_col=[0,1], header=0)
 
         run_network(**simulation_params, isolate=run['isolate'])

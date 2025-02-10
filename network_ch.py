@@ -520,7 +520,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
     elapsed_time = 0
 
-    print('Running simulation for total network time {simulation_time}s, in chunks of {chunk_size}s.')
+    print(f'Running simulation for total network time {simulation_time}s, in chunks of {chunk_size}s.')
 
     for ii in tqdm(range(np.ceil(simulation_time / chunk_size).astype(int))):
         spikes_exc_mon = SpikeMonitor(G_exc)
