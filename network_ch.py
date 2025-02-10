@@ -60,25 +60,58 @@ def ei_plasticity_eqs(plasticity, learning_rate):
 def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_potential,
                 target_rate, plasticity, background_poisson, poisson_amplitude, output_file,
                 simulation_time, learning_rate, state_variables=None, stimuli=None,
-                thresholds=None, seed_num=42, tau_stdp_ms=20, recharge=0, save_weights=False):
+                thresholds=None, seed_num=42, tau_stdp_ms=20, recharge=0, save_weights=False,
+                isolate=None, chunk_size=None):
     """
     Simulates a spiking neural network with customizable plasticity rules and input stimuli.
 
-    The function records spikes, state variables, and synaptic weights directly 
-    into an HDF5 (.h5) file.
+    This function can simulate neurons in both a **connected network state** and an **isolated state** 
+    (where neurons are disconnected from each other but still receive external noise and perturbations). 
+    The simulation results, including spikes, state variables, and synaptic weights, are stored in an HDF5 (.h5) file.
 
     Parameters
     ----------
-    weights : ndarray
-        Synaptic weight matrix (N_total × N_total) in nanosiemens (nS), where `N_total = N_exc + N_inh`.
+    weights : dict
+        A dictionary containing synaptic connectivity data for different neuron types.
+        Each key represents a synaptic connection type and maps to a dictionary with:
+        - `'sources'` (ndarray): Pre-synaptic neuron indices.
+        - `'targets'` (ndarray): Post-synaptic neuron indices.
+        - `'weights'` (ndarray): Synaptic weight values (in nanosiemens).
+        
+        The keys in `weights` should be:
+        - `'EE'` : Excitatory → Excitatory
+        - `'IE'` : Excitatory → Inhibitory
+        - `'EI'` : Inhibitory → Excitatory
+        - `'II'` : Inhibitory → Inhibitory
+        
+        Example structure:
+        ```python
+        weights = {
+            'EE': {'sources': np.array([...]), 'targets': np.array([...]), 'weights': np.array([...])},
+            'IE': {'sources': np.array([...]), 'targets': np.array([...]), 'weights': np.array([...])},
+            'EI': {'sources': np.array([...]), 'targets': np.array([...]), 'weights': np.array([...])},
+            'II': {'sources': np.array([...]), 'targets': np.array([...]), 'weights': np.array([...])},
+        }
+        ```
     exc_alpha : ndarray
         Excitatory adaptation parameter (`alpha1`) for each excitatory neuron, shape (N_exc,).
-    delays : tuple of ndarrays
-        Synaptic delays (in milliseconds) for different connection types:
-        - `delays_ee` : Excitatory → Excitatory
-        - `delays_ie` : Excitatory → Inhibitory
-        - `delays_ii` : Inhibitory → Inhibitory
-        - `delays_ei` : Inhibitory → Excitatory
+    delays : dict
+        A dictionary containing synaptic delays (in milliseconds) for different connection types.
+        The keys must match the `weights` dictionary:
+        - `'EE'`: Excitatory → Excitatory
+        - `'IE'`: Excitatory → Inhibitory
+        - `'EI'`: Inhibitory → Excitatory
+        - `'II'`: Inhibitory → Inhibitory
+
+        Example:
+        ```python
+        delays = {
+            'EE': np.array([...]),
+            'IE': np.array([...]),
+            'EI': np.array([...]),
+            'II': np.array([...]),
+        }
+        ```
     N_exc : int
         Number of excitatory neurons.
     N_inh : int
@@ -124,6 +157,16 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         Determines whether neurons should "recharge" after firing.
     save_weights : bool, default=False
         If `True`, saves final synaptic weights to the `.h5` file.
+    isolate : dict, optional (default: None)
+        If provided, simulates neurons in an **isolated state** (disconnected from the network).
+        The dictionary must contain:
+        - `'exc_stim'` (bool): Whether to apply perturbative input to excitatory neurons.
+        - `'inh_stim'` (bool): Whether to apply perturbative input to inhibitory neurons.
+        - `'stim_count'` (int): Number of stimulus repetitions.
+        - `'var_stats'` (DataFrame): Statistical parameters for external noise (mean, std, correlations).
+    chunk_size : float, optional (default: None)
+        If provided, runs the simulation in chunks of `chunk_size` seconds to avoid memory overflow.
+        If `None`, defaults to 10 seconds unless `isolate` mode is used, in which case it adapts to stimulus settings.
 
     Returns
     -------
@@ -132,6 +175,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
     Notes
     -----
+    - If `isolate` is provided, neurons **do not** receive synaptic input from the network, but instead receive **external noise**.
     - The function **appends to the HDF5 file** if it already exists, avoiding data loss.
     - Weights are stored in a hierarchical format inside the `"weights"` group.
     - If `state_variables` is provided, their data is recorded separately for excitatory and inhibitory populations.
@@ -139,14 +183,16 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
     Example
     -------
+    **Standard network simulation**
     ```python
-    run_network(weights=Z, exc_alpha=alpha, delays=(delays_ee, delays_ie, delays_ii, delays_ei),
+    run_network(weights=weights_dict, exc_alpha=alpha, delays=delays_dict,
                 N_exc=8000, N_inh=2000, alpha1=True, alpha2=2, reset_potential=False,
                 target_rate=5.0, plasticity='hebb', background_poisson=1.5, poisson_amplitude=0.3,
                 output_file="simulation_results.h5", simulation_time=100, learning_rate=0.001,
                 state_variables=['v', 'ge', 'gi'], save_weights=True)
     ```
     """
+
     meta_eta = 0
 
     np.random.seed(seed_num)
@@ -178,19 +224,74 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
     tau_coincidence = 50*ms
     # ________________________
 
+    if isolate is not None:
+        Isyn = 'Isyn = -(ge + gext(t))*(v-Ee)-(gi + gext_inh(t))*(v-Ei) : amp'
+        dgedt = 'dge/dt = (mu_e - ge) / taue + sigma_e * sqrt(2 / taue) * xi_e : siemens'
+        dgidt = 'dgi/dt = (mu_i - gi) / taui + sigma_i * sqrt(2 / taui) * (rho*xi_e+sqrt(1-rho**2)*xi_i) : siemens'
+        mu_e = 'mu_e : siemens'
+        mu_i = 'mu_i : siemens'
+        sigma_e = 'sigma_e : siemens'
+        sigma_i = 'sigma_i : siemens'
+        rho = 'rho : 1'
+        # Perturbative input
+        #________________________
+
+        stim_steps = 5
+        step_time = 0.1
+
+        pair = np.array([1]+[0]*(stim_steps-1))
+
+        input_list = np.linspace(-0.35, 0.35, 8)
+        init_steps = stim_steps * len(input_list)
+
+        input_arr_exc = np.zeros(init_steps)
+        input_arr_inh = np.zeros(init_steps)
+
+        if isolate['exc_stim']:
+            for ii in range(isolate['stim_count']):
+                for inp in input_list:
+                    input_arr_exc = np.append(input_arr_exc, pair*inp)
+                    input_arr_inh = np.append(input_arr_inh, np.zeros(stim_steps))
+
+        if isolate['inh_stim']:
+            for ii in range(isolate['stim_count']):
+                for inp in input_list:
+                    input_arr_inh = np.append(input_arr_inh, pair*inp)
+                    input_arr_exc = np.append(input_arr_exc, np.zeros(stim_steps))
+
+        simulation_time = len(input_arr_exc) * step_time
+        if chunk_size is None:
+            chunk_size = init_steps * step_time
+
+        gext = TimedArray(input_arr_exc * nS, dt=step_time*second)
+        gext_inh = TimedArray(input_arr_inh * nS, dt=step_time*second)
+        # _________________________________
+    else:
+        Isyn = 'Isyn = -(ge)*(v-Ee)-(gi)*(v-Ei) : amp'
+        dgedt = 'dge/dt = -ge/taue : siemens'
+        dgidt = 'dgi/dt = -gi/taue : siemens'
+        mu_e = ''
+        mu_i = ''
+        sigma_e = ''
+        sigma_i = ''
+        rho = ''
+
+        if chunk_size is None:
+            chunk_size = 10
+
     # Neural model equations
 
     eqs_str = f'''
     dv/dt = (-gL*(v-EL) + Isyn) / C : volt (unless refractory)
-    Isyn = -(ge)*(v-Ee)-(gi)*(v-Ei) : amp
+    {Isyn}
     
     dx/dt = -x/tau_stdp : 1
     dq/dt = -q/tau_coincidence : 1
     db_dec/dt = -b_dec/tau_bdec : 1
     db_mon/dt = -b_mon/tau_bmon : 1
     
-    dge/dt = -ge/taue : siemens
-    dgi/dt = -gi/taui : siemens
+    {dgedt}
+    {dgidt}
     
     dy/dt = (-y + ge/nS)/tidip : 1
     
@@ -208,6 +309,11 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
     network_rate : 1
     neuron_target_rate : 1
     rech : 1
+    {mu_e}
+    {mu_i}
+    {sigma_e}
+    {sigma_i}
+    {rho}
     '''
 
 
@@ -244,9 +350,14 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
     eqs = Equations(eqs_str)
 
-    G_exc = NeuronGroup(N_exc, eqs, threshold='v > theta', reset=reset_exc, method='exponential_euler', refractory=refrac,
+    if isolate is not None:
+        updater = 'euler'
+    else:
+        updater = 'exponential_euler'
+
+    G_exc = NeuronGroup(N_exc, eqs, threshold='v > theta', reset=reset_exc, method=updater, refractory=refrac,
                         events={'burst': 'b_dec > 3'})
-    G_inh = NeuronGroup(N_inh, eqs, threshold='v > theta', reset=reset, method='exponential_euler', refractory=refrac)
+    G_inh = NeuronGroup(N_inh, eqs, threshold='v > theta', reset=reset, method=updater, refractory=refrac)
 
     G_exc.neuron_target_rate = target_rate
 
@@ -286,6 +397,14 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
     # G_exc.z = target_rate
 
+    if isolate is not None:
+        for group, ei in zip([G_exc, G_inh], ['exc','inh']):
+            group.mu_e = isolate['var_stats'].loc[ei,'mean_e'].values * nS
+            group.mu_i = isolate['var_stats'].loc[ei,'mean_i'].values * nS
+            group.sigma_e = isolate['var_stats'].loc[ei,'std_e'].values * nS
+            group.sigma_i = isolate['var_stats'].loc[ei,'std_i'].values * nS
+            group.rho = isolate['var_stats'].loc[ei,'pearsonr'].values
+
     if thresholds is None:
         G_exc.basethr = omega
     else:
@@ -294,78 +413,80 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
     G_inh.basethr = omega
     # ________________
 
-    # Initiate background input
-    # _________________________________
-    P1 = PoissonInput(G_exc, 'ge', 1000, background_poisson*Hz, weight=poisson_amplitude*nS)
-    P2 = PoissonInput(G_inh, 'ge', 1000, background_poisson*Hz, weight=poisson_amplitude*nS)
-    # _________________________________
 
-    # Activate patterns
-    # ___________________________
+    if isolate is None:
+        # Initiate background input
+        # _________________________________
+        P1 = PoissonInput(G_exc, 'ge', 1000, background_poisson*Hz, weight=poisson_amplitude*nS)
+        P2 = PoissonInput(G_inh, 'ge', 1000, background_poisson*Hz, weight=poisson_amplitude*nS)
+        # _________________________________
 
-    if stimuli is not None:
-        stim_dt = 0.1
-        rm = get_stim_matrix(stimuli, N_exc, simulation_time, dt=stim_dt) * 10
-        ta = TimedArray(rm.T*kHz, dt=stim_dt*second)
-        G_ext = PoissonGroup(N_exc, rates='ta(t,i)')
-        Syn_ext = Synapses(G_ext, G_exc, model='w : 1', on_pre='ge += w*nS')
-        Syn_ext.connect(i='j')
-        Syn_ext.w = poisson_amplitude
+        # Activate patterns
+        # ___________________________
 
-    # ___________________________
+        if stimuli is not None:
+            stim_dt = 0.1
+            rm = get_stim_matrix(stimuli, N_exc, simulation_time, dt=stim_dt) * 10
+            ta = TimedArray(rm.T*kHz, dt=stim_dt*second)
+            G_ext = PoissonGroup(N_exc, rates='ta(t,i)')
+            Syn_ext = Synapses(G_ext, G_exc, model='w : 1', on_pre='ge += w*nS')
+            Syn_ext.connect(i='j')
+            Syn_ext.w = poisson_amplitude
 
-    # Rate calculation
-    # _________________________
-    # In order to use heterosynaptic plasticity, a dummy unit is created, receiving input from all neurons
-    # and integrating it as a rate. The rate is then passed on the neurons through "gap junctions".
+        # ___________________________
 
-    eqs_rate_mon = '''
-        dr/dt = -r/tau_rate : 1
-        '''
+        # Rate calculation
+        # _________________________
+        # In order to use heterosynaptic plasticity, a dummy unit is created, receiving input from all neurons
+        # and integrating it as a rate. The rate is then passed on the neurons through "gap junctions".
 
-    rateunit = NeuronGroup(1, Equations(eqs_rate_mon), method='exponential_euler')
-    Sre = Synapses(G_exc, rateunit, model='w : 1', on_pre='r += w')
-    Ser = Synapses(rateunit, G_exc, 'network_rate_post = r_pre : 1 (summed)')
+        eqs_rate_mon = '''
+            dr/dt = -r/tau_rate : 1
+            '''
 
-    Sre.connect(p=1)
-    Ser.connect(p=1)
+        rateunit = NeuronGroup(1, Equations(eqs_rate_mon), method='exponential_euler')
+        Sre = Synapses(G_exc, rateunit, model='w : 1', on_pre='r += w')
+        Ser = Synapses(rateunit, G_exc, 'network_rate_post = r_pre : 1 (summed)')
 
-    Sre.w = (second/tau_rate) / N_exc
+        Sre.connect(p=1)
+        Ser.connect(p=1)
 
-    # _________________________
+        Sre.w = (second/tau_rate) / N_exc
 
-    # Define E<-I plasticity equations
-    # ___________________________________
+        # _________________________
 
-    pre_eqs_inh, post_eqs_inh = ei_plasticity_eqs(plasticity, learning_rate)
+        # Define E<-I plasticity equations
+        # ___________________________________
 
-    # Initiate synapses
-    # _________________________
+        pre_eqs_inh, post_eqs_inh = ei_plasticity_eqs(plasticity, learning_rate)
 
-    model_ei = '''
-        w : 1
-        alpha : 1
-        '''
+        # Initiate synapses
+        # _________________________
 
-    Sii = Synapses(G_inh, G_inh, model='w : 1', on_pre='gi += w*nS', method='exponential_euler')
-    See = Synapses(G_exc, G_exc, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
-    Sie = Synapses(G_exc, G_inh, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
-    Sei = Synapses(G_inh, G_exc, model=model_ei, on_pre=pre_eqs_inh, on_post=post_eqs_inh, method='exponential_euler')
+        model_ei = '''
+            w : 1
+            alpha : 1
+            '''
 
-    # connect synapses
-    synapses = {
-        'EE': See,
-        'IE': Sie,
-        'EI': Sei,
-        'II': Sii
-    }
+        Sii = Synapses(G_inh, G_inh, model='w : 1', on_pre='gi += w*nS', method='exponential_euler')
+        See = Synapses(G_exc, G_exc, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
+        Sie = Synapses(G_exc, G_inh, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
+        Sei = Synapses(G_inh, G_exc, model=model_ei, on_pre=pre_eqs_inh, on_post=post_eqs_inh, method='exponential_euler')
 
-    for pre in ['E','I']:
-        for post in ['E','I']:
-            label = f'{post}{pre}'
-            synapses[label].connect(i=weights[label]['sources'].astype(int), j=weights[label]['targets'].astype(int))
-            synapses[label].w = weights[label]['weights']
-            synapses[label].delay = delays[label] * ms
+        # connect synapses
+        synapses = {
+            'EE': See,
+            'IE': Sie,
+            'EI': Sei,
+            'II': Sii
+        }
+
+        for pre in ['E','I']:
+            for post in ['E','I']:
+                label = f'{post}{pre}'
+                synapses[label].connect(i=weights[label]['sources'].astype(int), j=weights[label]['targets'].astype(int))
+                synapses[label].w = weights[label]['weights']
+                synapses[label].delay = delays[label] * ms
 
     # Run simulation
     # __________________________
@@ -399,7 +520,9 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
     elapsed_time = 0
 
-    for ii in tqdm(range(np.ceil(simulation_time / 10).astype(int))):
+    print('Running simulation for total network time {simulation_time}s, in chunks of {chunk_size}s.')
+
+    for ii in tqdm(range(np.ceil(simulation_time / chunk_size).astype(int))):
         spikes_exc_mon = SpikeMonitor(G_exc)
         spikes_inh_mon = SpikeMonitor(G_inh)
         net.add(spikes_exc_mon, spikes_inh_mon)
@@ -409,9 +532,9 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
             state_inh_mon = StateMonitor(G_inh[:], state_variables, record=True, dt=1*ms)
             net.add(state_exc_mon, state_inh_mon)
 
-        net.run(10*second)
+        net.run(chunk_size*second)
 
-        elapsed_time += 10
+        elapsed_time += chunk_size
 
         exc_spikes = np.column_stack((spikes_exc_mon.i, spikes_exc_mon.t / second))
         inh_spikes = np.column_stack((spikes_inh_mon.i, spikes_inh_mon.t / second))

@@ -1,11 +1,13 @@
 run:
   learning_rate: 0.
-  stim_count: 100
   state_variables: null
   simulation_time: null
-init_matrix: hebb_fast_train1000
+isolate:
+  exc_stim: True
+  inh_stim: True
+  stim_count: 10
+  var_stats: data/var_stats/hebb1000_cond_stats.csv
+init_matrix: data/hebb_train1000.h5
 stimulus: null
 name: perturbation
 save_matrix: False
-varstats_e: data/var_stats/hebb_conductances1000_e.csv
-varstats_i: data/var_stats/hebb_conductances1000_i.csv

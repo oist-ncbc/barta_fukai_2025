@@ -66,21 +66,9 @@ if __name__ == '__main__':
         output_file=output_file
     )
 
-    if args.isolate:
-        exc_stim, inh_stim = False, False
-        if 'exc' in args.isolate:
-            exc_stim = True
-        if 'inh' in args.isolate:
-            inh_stim = True
+    if 'isolate' in run:
+        run['isolate']['var_stats'] = read_csv(run['isolate']['var_stats'], index_col=[0,1], header=0)
 
-        varstats_e = read_csv(run['varstats_e'], index_col=None)
-        varstats_i = read_csv(run['varstats_i'], index_col=None)
-
-        simulation_params['exc_stim'] = exc_stim
-        simulation_params['inh_stim'] = inh_stim
-        simulation_params['varstats_e'] = varstats_e
-        simulation_params['varstats_i'] = varstats_i
-
-        sn_run(**simulation_params)
+        run_network(**simulation_params, isolate=run['isolate'])
     else:
         run_network(**simulation_params)
