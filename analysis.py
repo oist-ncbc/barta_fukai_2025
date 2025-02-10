@@ -5,7 +5,7 @@ import argparse
 import pickle
 
 
-def get_spike_counts(spike_times, spike_indices, t_max, N=8000, dt=0.1):
+def get_spike_counts(spike_indices, spike_times, t_max, N=8000, dt=0.1):
     bins_indices = np.arange(-0.5, N, 1)
     bins_time = np.arange(0, t_max+dt/10, dt)
 
