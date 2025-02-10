@@ -17,7 +17,6 @@ if __name__ == '__main__':
     parser.add_argument('--system', type=str, required=True)
     parser.add_argument('--run', type=str, required=True)
     parser.add_argument('--patterns', type=int, required=True)
-    parser.add_argument('--isolate', type=str, default=None)
 
     args = parser.parse_args()
 
@@ -30,11 +29,12 @@ if __name__ == '__main__':
     with open('config/server_config.yaml') as f:
         server_config = yaml.safe_load(f)
 
-    folder_path = f"{server_config['data_path']}"
+    folder_path = f"{server_config['data_path']}/{run['folder']}"
 
+    input_file  = f"{folder_path}/{run['init_matrix']}{args.patterns}.h5"
     output_file = f"{folder_path}/{system['name']}_{run['name']}{args.patterns}.h5"
 
-    with h5py.File(run['init_matrix'], "r") as src, h5py.File(output_file, "w") as dest:
+    with h5py.File(input_file, "r") as src, h5py.File(output_file, "w") as dest:
         # Copy a group from source to destination
         src.copy("/connectivity", dest)  # Copies to the root of destination
 
@@ -67,6 +67,7 @@ if __name__ == '__main__':
     )
 
     if 'isolate' in run:
+        var_stats_filename = f'{folder_path}/{system['name']}_conductances{args.patterns}_stats.csv'
         run['isolate']['var_stats'] = read_csv(run['isolate']['var_stats'], index_col=[0,1], header=0)
 
         run_network(**simulation_params, isolate=run['isolate'])

@@ -1,8 +1,9 @@
 run:
   learning_rate : 1.e-3
-  simulation_time : 10000
+  simulation_time : 1000
   state_variables : null
   save_weights : True
-init_matrix : data/lognorm1000.h5
+folder : lognormal
+init_matrix : init
 stimulus : null
 name : train

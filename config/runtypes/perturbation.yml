@@ -6,8 +6,8 @@ isolate:
   exc_stim: True
   inh_stim: True
   stim_count: 10
-  var_stats: data/var_stats/hebb1000_cond_stats.csv
-init_matrix: data/hebb_train1000.h5
 stimulus: null
 name: perturbation
 save_matrix: False
+folder : lognormal
+init_matrix : train

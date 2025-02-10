@@ -2,7 +2,7 @@ import numpy as np
 from tqdm import tqdm
 from itertools import combinations, product
 import argparse
-import pickle
+import yaml
 import h5py
 from scipy.sparse import csr_array
 
@@ -10,7 +10,7 @@ from utils import create_weight_dataset
 
 
 def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True,
-            var_factor=0.5, fix_size=False, spread=0, seed=42):
+            var_factor=0.5, fix_size=False, spread=0, seed=42, distribution='lognormal'):
     """
     Generate connectivity matrix by calculating Hebbian terms in EE connectivity, selecting the highest ones
     and overlaying lognormal weight distribution.
@@ -82,9 +82,14 @@ def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True,
     sig = np.sqrt(np.log(Var/(E*E) + 1))
     mu = np.log(E) - sig**2 / 2
 
-    lognorm_rvs_exc = np.sort(np.exp(np.random.randn(len(weights_ee))*sig + mu))
+    if distribution == 'lognormal':
+        rvs_exc = np.sort(np.exp(np.random.randn(len(weights_ee))*sig + mu))
+    elif distribution == 'normal':
+        rvs_exc = np.sort(np.random.randn(len(weights_ee))*np.sqrt(Var) + E)
+    else:
+        raise ValueError(f'Distribution "{distribution}" is not supported.')
 
-    Z[:N_exc,:N_exc][Z[:N_exc,:N_exc] != 0] = lognorm_rvs_exc[np.argsort(np.argsort(weights_ee))]
+    Z[:N_exc,:N_exc][Z[:N_exc,:N_exc] != 0] = rvs_exc[np.argsort(np.argsort(weights_ee))]
 
     slices = [
         (N_exc, N, 0, N_exc),
@@ -147,7 +152,8 @@ if __name__ == '__main__':
     parser.add_argument('--ee_sparse', type=float, default=0.05)
     parser.add_argument('--i_sparse', type=float, default=0.1)
     parser.add_argument('--i_factor', type=float, default=1)
-    parser.add_argument('-o', '--output', type=str, default='')
+    parser.add_argument('--folder', type=str, default='')
+    parser.add_argument('--name', type=str, default='')
     parser.add_argument('--var', type=float, default=0.5)
     parser.add_argument('--spread', type=float, default=0)
 
@@ -170,7 +176,14 @@ if __name__ == '__main__':
         'I': (8000,10000)
     }
 
-    with h5py.File(args.output, "w") as h5f:  # Open file in append mode
+    with open('config/server_config.yaml') as f:
+        server_config = yaml.safe_load(f)
+
+    data_path = f"{server_config['data_path']}"
+
+    output_filename = f'{data_path}/{args.folder}/init{args.patterns}.h5'
+
+    with h5py.File(output_filename, "w") as h5f:  # Open file in append mode
         connectivity_group = h5f.require_group("connectivity")
         weights_group = connectivity_group.require_group("weights")  # Ensure "weights" group exists
 

@@ -2,7 +2,8 @@ run:
   learning_rate : 0.
   simulation_time : 20
   state_variables : [ge, gi]
-init_matrix : data/hebb_fast_train1000.h5
 stimulus : null
 name : conductances
 save_matrix: False
+folder : lognormal
+init_matrix : train
