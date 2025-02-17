@@ -1,6 +1,6 @@
 run:
   learning_rate : 1.e-3
-  simulation_time : 1000
+  simulation_time : 2000
   state_variables : null
   save_weights : True
 folder : lognormal

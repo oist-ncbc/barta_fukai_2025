@@ -5,9 +5,9 @@ run:
 isolate:
   exc_stim: True
   inh_stim: True
-  stim_count: 10
+  stim_count: 500
 stimulus: null
 name: perturbation
 save_matrix: False
 folder : lognormal
-init_matrix : train
+init_matrix : hebb_train

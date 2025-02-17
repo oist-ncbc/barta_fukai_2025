@@ -34,7 +34,7 @@ if __name__ == '__main__':
     input_file  = f"{folder_path}/{run['init_matrix']}{args.patterns}.h5"
     output_file = f"{folder_path}/{system['name']}_{run['name']}{args.patterns}.h5"
 
-    with h5py.File(input_file, "r") as src, h5py.File(output_file, "w") as dest:
+    with h5py.File(input_file, "r", swmr=True) as src, h5py.File(output_file, "w") as dest:
         # Copy a group from source to destination
         src.copy("/connectivity", dest)  # Copies to the root of destination
 
@@ -67,8 +67,8 @@ if __name__ == '__main__':
     )
 
     if 'isolate' in run:
-        var_stats_filename = f"{folder_path}/{system['name']}_conductances{args.patterns}_stats.csv"
-        run['isolate']['var_stats'] = read_csv(run['isolate']['var_stats'], index_col=[0,1], header=0)
+        var_stats_filename = f"{folder_path}/var_stats/{system['name']}_conductances{args.patterns}_stats.csv"
+        run['isolate']['var_stats'] = read_csv(var_stats_filename, index_col=[0,1], header=0)
 
         run_network(**simulation_params, isolate=run['isolate'])
     else:

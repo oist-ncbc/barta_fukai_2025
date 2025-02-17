@@ -2,6 +2,7 @@ import numpy as np
 import h5py
 from scipy.stats import chi2
 import matplotlib.pyplot as plt
+import yaml
 
 
 def despine_ax(ax, where=None, remove_ticks=None):
@@ -31,6 +32,12 @@ def despine_ax(ax, where=None, remove_ticks=None):
 
     for side in to_despine:
         ax.spines[side].set_visible(False)
+
+def data_path():
+    with open('config/server_config.yaml') as f:
+        server_config = yaml.safe_load(f)
+
+    return server_config['data_path']
 
 def underscore(text):
     if len(text) > 0:

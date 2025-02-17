@@ -5,7 +5,7 @@ import argparse
 import yaml
 
 from sklearn.covariance import MinCovDet
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 from utils import *
 
@@ -76,8 +76,10 @@ if __name__ == '__main__':
             ge = h5f[f'state/{ei}/ge'][1000:,:].T.reshape(n_batches, batch_size, -1)
             gi = h5f[f'state/{ei}/gi'][1000:,:].T.reshape(n_batches, batch_size, -1)
 
-        with Pool(processes=None) as pool:
-            results = list(tqdm(pool.imap(process_batch, zip(ge, gi)), total=n_batches))
+        # with Pool(processes=None) as pool:
+        n_cpu = cpu_count()
+        with Pool(processes=n_cpu) as pool:
+            results = list(tqdm(pool.imap(process_batch, zip(ge, gi)), total=n_batches, smoothing=0, mininterval=n_cpu))
 
         means = np.concatenate(np.array([res[0] for res in results]))
         covs  = np.concatenate(np.array([res[1] for res in results]))

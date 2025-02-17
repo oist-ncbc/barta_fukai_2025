@@ -4,7 +4,23 @@ import argparse
 import pickle
 import pandas as pd
 import h5py
-from tqdm import tqdm
+import logging
+import time
+
+import os
+import psutil
+import gc
+
+from analysis import get_spike_counts
+
+
+def memory_usage():
+    process = psutil.Process(os.getpid())
+    mem_info = process.memory_info()
+    return f"[MEMORY] RSS: {mem_info.rss / 1e6:.2f} MB, VMS: {mem_info.vms / 1e6:.2f} MB"
+
+def seconds_to_hms(seconds):
+    return time.strftime("%H:%M:%S", time.gmtime(seconds))
 
 def get_stim_matrix(stimuli, N_exc, simulation_time, dt=0.1):
     time_arr = np.arange(0, simulation_time+1e-5, dt)
@@ -193,6 +209,10 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
     ```
     """
 
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s")
+
     meta_eta = 0
 
     np.random.seed(seed_num)
@@ -247,19 +267,19 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         input_arr_exc = np.zeros(init_steps)
         input_arr_inh = np.zeros(init_steps)
 
-        if isolate['exc_stim']:
-            for ii in range(isolate['stim_count']):
-                for inp in input_list:
+        for ii in range(isolate['stim_count']):
+            for inp in input_list:
+                if isolate['exc_stim']:
                     input_arr_exc = np.append(input_arr_exc, pair*inp)
                     input_arr_inh = np.append(input_arr_inh, np.zeros(stim_steps))
 
-        if isolate['inh_stim']:
-            for ii in range(isolate['stim_count']):
-                for inp in input_list:
+            for inp in input_list:
+                if isolate['inh_stim']:
                     input_arr_inh = np.append(input_arr_inh, pair*inp)
                     input_arr_exc = np.append(input_arr_exc, np.zeros(stim_steps))
 
         simulation_time = len(input_arr_exc) * step_time
+        
         if chunk_size is None:
             chunk_size = init_steps * step_time
 
@@ -491,8 +511,6 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
     # Run simulation
     # __________________________
 
-    net = Network(collect())
-
     default_units = {
         'v': mV,
         'Isyn': nA,
@@ -519,10 +537,17 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
                 h5f['state/inh'].create_dataset(variable, (0,N_inh), maxshape=(None,N_inh), dtype="float32", chunks=True, compression='gzip')
 
     elapsed_time = 0
+    elapsed_real_time = 0
 
-    print(f'Running simulation for total network time {simulation_time}s, in chunks of {chunk_size}s.')
+    num_chunks = int(np.ceil(simulation_time / chunk_size))
 
-    for ii in tqdm(range(np.ceil(simulation_time / chunk_size).astype(int))):
+    logging.info(f"Starting network simulation for {simulation_time}s in {num_chunks} chunks of {chunk_size}s each.")
+
+    net = Network(collect())
+
+    for ii in range(num_chunks):
+        start_time = time.time()
+
         spikes_exc_mon = SpikeMonitor(G_exc)
         spikes_inh_mon = SpikeMonitor(G_inh)
         net.add(spikes_exc_mon, spikes_inh_mon)
@@ -535,9 +560,31 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         net.run(chunk_size*second)
 
         elapsed_time += chunk_size
+        
+        chunk_real_time = time.time() - start_time
+        elapsed_real_time += chunk_real_time
+        per_chunk_real_time = elapsed_real_time / (ii+1)
+        remaining_chunks = num_chunks - (ii+1)
+        remaining_real_time = remaining_chunks * chunk_real_time
+
+        logging.info(
+            f"Chunk {ii+1} completed in {seconds_to_hms(chunk_real_time)}. "
+            f"Elapsed time: {seconds_to_hms(elapsed_real_time)}. Estimated remaining: {seconds_to_hms(remaining_real_time)}. {memory_usage()}"
+        )
 
         exc_spikes = np.column_stack((spikes_exc_mon.i, spikes_exc_mon.t / second))
         inh_spikes = np.column_stack((spikes_inh_mon.i, spikes_inh_mon.t / second))
+
+        _, sc_exc = get_spike_counts(exc_spikes[:,0], exc_spikes[:,1]-elapsed_time+chunk_size, t_max=chunk_size, N=N_exc, dt=1)
+        _, sc_inh = get_spike_counts(inh_spikes[:,0], inh_spikes[:,1]-elapsed_time+chunk_size, t_max=chunk_size, N=N_inh, dt=1)
+
+        mean_rate_exc = sc_exc.mean()
+        mean_rate_inh = sc_inh.mean()
+        rate_std_exc = sc_exc.mean(axis=1).std(axis=0)
+        rate_std_inh = sc_inh.mean(axis=1).std(axis=0)
+
+        logging.info(f"Excitatory neurons firing rate during chunk: ({mean_rate_exc} +/- {rate_std_exc})Hz")
+        logging.info(f"Inhibitory neurons firing rate during chunk: ({mean_rate_inh} +/- {rate_std_inh})Hz")
 
         # Append to HDF5
         with h5py.File(output_file, "a") as h5f:
@@ -548,9 +595,6 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
             h5f["spikes_exc"][-exc_spikes.shape[0]:] = exc_spikes
             h5f["spikes_inh"][-inh_spikes.shape[0]:] = inh_spikes
-
-            del spikes_exc_mon
-            del spikes_inh_mon
 
             if state_variables is not None:
                 for variable in state_variables:
@@ -573,24 +617,13 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
                 if "weights" in grp:
                     del grp["weights"]  # Delete existing dataset before overwriting
                 grp.create_dataset("weights", data=Sei.w[:], compression="gzip")  # Optional compression
-                # weights_group = h5f.require_group("weights")  # Ensure "weights" group exists
 
-                # # Function to create dataset with the correct shape
-                # def create_weight_dataset(group, name, data, dtype=None):
-                #     """Creates a dataset with the correct shape based on the input data."""
-                #     group.require_dataset(
-                #         name,
-                #         shape=(data.shape[0],),  # Set shape dynamically based on data size
-                #         maxshape=(None,),  # Allow expansion
-                #         dtype=dtype if dtype else data.dtype,  # Use given dtype or infer from data
-                #         compression="gzip"  # Enable compression
-                #     )[:] = data  # Assign data after creation
+        net.remove(spikes_exc_mon, spikes_inh_mon)
+        del spikes_exc_mon
+        del spikes_inh_mon
 
-                # # Create datasets for each weight type
-                # for label, synapses in zip(['EE','EI','IE','II'], [See, Sei, Sie, Sii]):
-                #     create_weight_dataset(weights_group.require_group(label), "sources", synapses.i[:], dtype=np.uint16)
-                #     create_weight_dataset(weights_group.require_group(label), "targets", synapses.j[:], dtype=np.uint16)
-                #     create_weight_dataset(weights_group.require_group(label), "weights", synapses.w[:])
+        gc.collect()
+
 
 def load_stim_file(filename, patterns, randstim, fraction=10):
     stims = pd.read_csv(filename, header=None, index_col=False).values[:len(patterns)]
