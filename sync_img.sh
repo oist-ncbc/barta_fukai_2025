@@ -4,7 +4,7 @@ MANUSCRIPT_DIR="$HOME/manuscripts/StructuredInhibition/img"
 SOURCE_DIR="img"
 
 # Navigate to Overleaf project directory
-cd "$PROJECT_DIR" || exit
+cd "$MANUSCRIPT_DIR" || exit
 
 # Copy new images
 rsync -av --ignore-existing "$SOURCE_DIR/" "$MANUSCRIPT_DIR/"
