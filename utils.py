@@ -1,6 +1,8 @@
 import numpy as np
+import pandas as pd
 import h5py
 from scipy.stats import chi2
+from scipy import sparse
 import matplotlib.pyplot as plt
 import yaml
 
@@ -135,4 +137,35 @@ def plot_covariance_ellipse(mean, cov, ax=None, confidence=0.95, **line_kwargs):
     xy_rotated[1] += mean[1]
     
     # Plot
-    ax.plot(xy_rotated[0], xy_rotated[1], 'b', label=f'{confidence*100:.1f}% Confidence Ellipse', **line_kwargs)
+    ax.plot(xy_rotated[0], xy_rotated[1], **line_kwargs)
+
+class Patterns:
+    def __init__(self, indices, splits, neurons=8000):
+        self.indices = indices
+        self.splits = splits
+        self.n = len(splits) + 1
+        self.neurons = neurons
+    
+    def sizes(self):
+            pointers = np.concatenate([[0], self.splits, [len(self.indices)]])
+            return np.diff(pointers)
+
+    def participation(self):
+            ser = pd.Series(self.indices).value_counts().reindex(np.arange(self.neurons), fill_value=0)
+            return ser.values
+    
+    def csr(self):
+        pointers = np.concatenate([[0], self.splits, [len(self.indices)]])
+        data = np.ones(len(self.indices))
+        return sparse.csr_array((data, self.indices, pointers))
+    
+    def dense(self):
+        return self.csr().toarray()
+    
+    def randomize(self):
+        new_indices = []
+
+        for s in self.sizes():
+            new_indices.extend(np.random.permutation(self.neurons)[:s])
+
+        return Patterns(new_indices, self.splits, self.neurons)
