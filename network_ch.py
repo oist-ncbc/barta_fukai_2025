@@ -344,7 +344,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
             H1 += a1
             H2 += a2
             b_dec += 1
-            x += (1-np.exp(-xx/0.05))**8 * rech + (1-rech)
+            x += (1-exp(-xx/0.05))**8 * rech + (1-rech)
             q = 1
             v = EL
             '''
@@ -353,7 +353,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
             H1 += a1
             H2 += a2
             b_dec += 1
-            x += (1-np.exp(-xx/0.05))**8 * rech + (1-rech)
+            x += (1-exp(-xx/0.05))**8 * rech + (1-rech)
             q = 1
             '''
     else:
@@ -362,7 +362,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
             H1 += a1
             H2 += a2
             b_dec += 1
-            x += (1-np.exp(-xx/0.05))**8 * rech + 1
+            x += (1-exp(-xx/0.05))**8 * rech + 1
             q = 1
             v = EL
             '''
@@ -371,7 +371,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
             H1 += a1
             H2 += a2
             b_dec += 1
-            x += (1-np.exp(-xx/0.05))**8 * rech + 1
+            x += (1-exp(-xx/0.05))**8 * rech + 1
             q = 1
             '''
 
