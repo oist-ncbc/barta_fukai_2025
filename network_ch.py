@@ -400,9 +400,9 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
     if recharge == 0:
         G_exc.neuron_target_rate = target_rate
     elif recharge < 0:
-        G_exc.neuron_target_rate = target_rate * 20
+        G_exc.neuron_target_rate = target_rate
     elif recharge > 0:
-        G_exc.neuron_target_rate = target_rate / 2
+        G_exc.neuron_target_rate = target_rate
 
     G_exc.rech = recharge
     G_inh.rech = 0
