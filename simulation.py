@@ -5,7 +5,7 @@ from pandas import read_csv
 import h5py
 import numpy as np
 
-from network_ch import run_network, load_stim_file
+from network_ch import run_network
 from single_neuron import run_network as sn_run
 from utils import load_connectivity, load_patterns
 

@@ -217,7 +217,7 @@ def load_stim_file(filename, patterns, fraction):
         if x[3] == False:
             tuples.append((x[0], x[1], pt[ind_ix]))
         else:
-        rand_pt = np.random.permutation(8000)[:len(pt)]
+            rand_pt = np.random.permutation(8000)[:len(pt)]
             tuples.append((x[0], x[1], rand_pt[ind_ix]))
 
     return tuples
