@@ -48,10 +48,10 @@ def ei_plasticity_eqs(plasticity, learning_rate):
             pre_eqs_inh = '''
                     gi += w*nS
                     alpha = neuron_target_rate_post*Hz*tau_stdp*2
-                    w = clip(w+(x_post-alpha)*learning_rate, 0, 100)'''
+                    w = clip(w+(x_post-alpha)*learning_rate*20/(tau_stdp/ms), 0, 100)'''  # factor 20/tau_stdp normalizes learning rate
 
             post_eqs_inh = '''
-                    w = clip(w+x_pre*learning_rate, 0, 100)'''
+                    w = clip(w+x_pre*learning_rate*20/(tau_stdp/ms), 0, 100)'''
 
         elif plasticity == 'idip':
             pre_eqs_inh = '''
@@ -169,8 +169,8 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         Random seed for reproducibility.
     tau_stdp_ms : float, default=20
         STDP time constant in milliseconds.
-    recharge : int, default=0
-        Determines whether neurons should "recharge" after firing.
+    recharge : float, default=0
+        Affects the calculation of x for excitatory neurons. Positive value leads to ignoring bursts, negative value leads to coincidence detection.
     save_weights : bool, default=False
         If `True`, saves final synaptic weights to the `.h5` file.
     isolate : dict, optional (default: None)
@@ -344,7 +344,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         H1 += a1
         H2 += a2
         b_dec += 1
-        x += 1-q*rech
+        x += (1-q*rech)**8
         q = 1
         v = EL
         '''
@@ -353,7 +353,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         H1 += a1
         H2 += a2
         b_dec += 1
-        x += 1-q*rech
+        x += (1-q*rech)**8
         q = 1
         '''
 
@@ -379,14 +379,15 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
                         events={'burst': 'b_dec > 3'})
     G_inh = NeuronGroup(N_inh, eqs, threshold='v > theta', reset=reset, method=updater, refractory=refrac)
 
-    G_exc.neuron_target_rate = target_rate
+    if recharge == 0:
+        G_exc.neuron_target_rate = target_rate
+    elif recharge < 0:
+        G_exc.neuron_target_rate = target_rate * 20
+    elif recharge > 0:
+        G_exc.neuron_target_rate = target_rate / 2
 
-    if recharge:
-        G_exc.rech = 1
-        G_inh.rech = 0
-    else:
-        G_exc.rech = 0
-        G_inh.rech = 0
+    G_exc.rech = recharge
+    G_inh.rech = 0
 
     target_b_mon = 0.1*Hz*tau_bmon*2
 
@@ -440,18 +441,6 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         P1 = PoissonInput(G_exc, 'ge', 1000, background_poisson*Hz, weight=poisson_amplitude*nS)
         P2 = PoissonInput(G_inh, 'ge', 1000, background_poisson*Hz, weight=poisson_amplitude*nS)
         # _________________________________
-
-        # Activate patterns
-        # ___________________________
-
-        if stimuli is not None:
-            stim_dt = 0.1
-            rm = get_stim_matrix(stimuli, N_exc, simulation_time, dt=stim_dt) * 10
-            ta = TimedArray(rm.T*kHz, dt=stim_dt*second)
-            G_ext = PoissonGroup(N_exc, rates='ta(t,i)')
-            Syn_ext = Synapses(G_ext, G_exc, model='w : 1', on_pre='ge += w*nS')
-            Syn_ext.connect(i='j')
-            Syn_ext.w = poisson_amplitude
 
         # ___________________________
 
@@ -557,6 +546,20 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
             state_inh_mon = StateMonitor(G_inh[:], state_variables, record=True, dt=1*ms)
             net.add(state_exc_mon, state_inh_mon)
 
+        # Activate patterns
+        # ___________________________
+
+        if stimuli is not None:
+            stim_dt = 0.1
+            rm = get_stim_matrix(stimuli, N_exc, chunk_size, dt=stim_dt) * 10
+            ta = TimedArray(rm.T*kHz, dt=stim_dt*second)
+            G_ext = PoissonGroup(N_exc, rates='ta(t-elapsed_time*second,i)')
+            Syn_ext = Synapses(G_ext, G_exc, model='w : 1', on_pre='ge += w*nS')
+            Syn_ext.connect(i='j')
+            Syn_ext.w = poisson_amplitude
+
+            net.add(G_ext, Syn_ext)
+
         net.run(chunk_size*second)
 
         elapsed_time += chunk_size
@@ -586,6 +589,14 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         logging.info(f"Excitatory neurons firing rate during chunk: ({mean_rate_exc} +/- {rate_std_exc})Hz")
         logging.info(f"Inhibitory neurons firing rate during chunk: ({mean_rate_inh} +/- {rate_std_inh})Hz")
 
+        if recharge != 0:
+            rate_diff = target_rate / mean_rate_exc
+            if recharge > 0:
+                G_exc.neuron_target_rate = np.clip((4*G_exc.neuron_target_rate + G_exc.neuron_target_rate * rate_diff) / 5, a_min=0, a_max=target_rate)
+            elif recharge < 0:
+                G_exc.neuron_target_rate = np.clip((4*G_exc.neuron_target_rate + G_exc.neuron_target_rate * rate_diff) / 5, a_min=target_rate, a_max=None)
+            logging.info(f"Target rate adjusted to {np.mean(G_exc.neuron_target_rate):.2f}")
+
         # Append to HDF5
         with h5py.File(output_file, "a") as h5f:
             h5f.attrs["simulation_time"] = elapsed_time
@@ -610,8 +621,8 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
                 del state_exc_mon
                 del state_inh_mon
 
-        if save_weights:
-            with h5py.File(output_file, "a") as h5f:  # Open file in append mode
+            if save_weights:
+            # with h5py.File(output_file, "a") as h5f:  # Open file in append mode
                 grp = h5f.require_group("connectivity/weights/EI")
 
                 if "weights" in grp:
@@ -622,28 +633,12 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         del spikes_exc_mon
         del spikes_inh_mon
 
+        if stimuli is not None:
+            net.remove(G_ext, Syn_ext)
+            del G_ext
+            del Syn_ext
+
         gc.collect()
-
-
-def load_stim_file(filename, patterns, randstim, fraction=10):
-    stims = pd.read_csv(filename, header=None, index_col=False).values[:len(patterns)]
-
-    if not randstim:
-        tuples = []
-        for x in stims:
-            pt = np.argwhere(patterns[int(x[2])]).flatten()
-            cut = int(len(pt) / fraction)
-            tuples.append((x[0], x[1], pt[:cut]))
-    else:
-        tuples = []
-        for x in stims:
-            # patlen = len(patterns[int(x[2])])
-            pt = np.argwhere(patterns[int(x[2])]).flatten()
-            cut = int(len(pt) / 100)
-            randix = np.random.permutation(8000)[:cut]
-            tuples = [(x[0], x[1], randix)]
-
-    return tuples
 
 
 if __name__ == '__main__':

@@ -5,9 +5,9 @@ import argparse
 import pickle
 
 
-def get_spike_counts(spike_indices, spike_times, t_max, N=8000, dt=0.1):
-    bins_indices = np.arange(-0.5, N, 1)
-    bins_time = np.arange(0, t_max+dt/10, dt)
+def get_spike_counts(spike_indices, spike_times, t_max, N=8000, dt=0.1, offset=0):
+    bins_indices = np.arange(-0.5, N, 1) + offset
+    bins_time = np.arange(0, t_max+dt/10, dt) + offset*dt
 
     histdata, *_ = np.histogram2d(spike_indices, spike_times, [bins_indices, bins_time])
 

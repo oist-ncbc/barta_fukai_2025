@@ -3,10 +3,11 @@ import yaml
 import pickle
 from pandas import read_csv
 import h5py
+import numpy as np
 
 from network_ch import run_network, load_stim_file
 from single_neuron import run_network as sn_run
-from utils import load_connectivity
+from utils import load_connectivity, load_patterns
 
 
 if __name__ == '__main__':
@@ -17,6 +18,7 @@ if __name__ == '__main__':
     parser.add_argument('--system', type=str, required=True)
     parser.add_argument('--run', type=str, required=True)
     parser.add_argument('--patterns', type=int, required=True)
+    parser.add_argument('--stim_frac', type=float, default=1)
 
     args = parser.parse_args()
 
@@ -44,17 +46,16 @@ if __name__ == '__main__':
     connectivity = load_connectivity(output_file)
 
     if type(system['target_rate']) == str:
-        with open(system['target_rate'],'rb') as f:
-            target_rate = pickle.load(f)
+        target_rate = np.loadtxt(f"config/rates/{system['target_rate']}_{args.patterns}.csv")
     else:
         target_rate = system['target_rate']
 
     if run['stimulus'] is not None:
+        patterns = load_patterns(output_file)
         stimulus_tuples = load_stim_file(
             run['stimulus']['file'],
-            matrix['patterns'],
-            randstim=run['stimulus']['random'],
-            fraction=run['stimulus']['fraction'])
+            patterns[:],
+            fraction=args.stim_frac)
     else:
         stimulus_tuples = None
 

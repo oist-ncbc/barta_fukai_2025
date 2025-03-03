@@ -1,0 +1,11 @@
+run:
+  learning_rate : 0.
+  simulation_time : 100
+  state_variables : null
+  save_weights : False
+  chunk_size : 10
+stimulus : config/stimuli/stimuli100ms.csv
+folder : lognormal
+init_matrix : null
+stimulus : null
+name : stimulus100ms

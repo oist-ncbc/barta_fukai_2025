@@ -5,7 +5,17 @@ from scipy.stats import chi2
 from scipy import sparse
 import matplotlib.pyplot as plt
 import yaml
+import psutil
+import os
 
+
+def memory_usage():
+    process = psutil.Process(os.getpid())
+    mem_info = process.memory_info()
+    return f"[MEMORY] RSS: {mem_info.rss / 1e6:.2f} MB, VMS: {mem_info.vms / 1e6:.2f} MB"
+
+def is_numpy_float(x):
+    return np.issubdtype(type(x), np.floating)
 
 def despine_ax(ax, where=None, remove_ticks=None):
     if where is None:
@@ -98,8 +108,6 @@ def load_connectivity(filename):
 
     return connectivity
 
-
-
 def plot_covariance_ellipse(mean, cov, ax=None, confidence=0.95, **line_kwargs):
     """
     Plots the confidence ellipse of a 2D normally distributed dataset.
@@ -143,21 +151,26 @@ class Patterns:
     def __init__(self, indices, splits, neurons=8000):
         self.indices = indices
         self.splits = splits
+        self.pointers = np.concatenate([[0], self.splits, [len(self.indices)]])
         self.n = len(splits) + 1
         self.neurons = neurons
+
+    def __getitem__(self, ix):
+        if isinstance(ix, slice):
+            start, stop, step = ix.indices(self.n)
+            return [self.indices[self.pointers[i]:self.pointers[i+1]] for i in range(start, stop, step)]
+        return self.indices[self.pointers[ix]:self.pointers[ix+1]]
     
     def sizes(self):
-            pointers = np.concatenate([[0], self.splits, [len(self.indices)]])
-            return np.diff(pointers)
+            return np.diff(self.pointers)
 
     def participation(self):
             ser = pd.Series(self.indices).value_counts().reindex(np.arange(self.neurons), fill_value=0)
             return ser.values
     
     def csr(self):
-        pointers = np.concatenate([[0], self.splits, [len(self.indices)]])
         data = np.ones(len(self.indices))
-        return sparse.csr_array((data, self.indices, pointers))
+        return sparse.csr_array((data, self.indices, self.pointers))
     
     def dense(self):
         return self.csr().toarray()
@@ -169,3 +182,42 @@ class Patterns:
             new_indices.extend(np.random.permutation(self.neurons)[:s])
 
         return Patterns(new_indices, self.splits, self.neurons)
+    
+
+def load_patterns(system, npat, run='train', folder='lognormal'):
+    path_to_folder = f"{data_path()}/{folder}"
+    filename = f"{path_to_folder}/{system}_{run}{npat}.h5"
+
+    with h5py.File(filename, "r") as h5f:
+        patterns = Patterns(
+            h5f['connectivity/patterns/indices'][:],
+            h5f['connectivity/patterns/splits'][:],
+            neurons=h5f['connectivity'].attrs['N_exc']
+        )
+
+    return patterns
+
+def load_linear(system, npat, folder='lognormal'):
+    path_to_folder = f"{data_path()}/{folder}/linear_approx"
+    filename = f"{path_to_folder}/{system}{npat}.csv"
+
+    return pd.read_csv(filename, index_col=[0,1])
+
+def load_stim_file(filename, patterns, fraction):
+    stims = pd.read_csv(filename, header=None, index_col=False).values
+
+    tuples = []
+
+    for x in stims:
+        pt = patterns[int(x[2])]
+
+        num_indices = int(len(pt) * fraction)
+        ind_ix = np.random.permutation(len(pt))[:num_indices]
+
+        if x[3] == False:
+            tuples.append((x[0], x[1], pt[ind_ix]))
+        else:
+        rand_pt = np.random.permutation(8000)[:len(pt)]
+            tuples.append((x[0], x[1], rand_pt[ind_ix]))
+
+    return tuples
