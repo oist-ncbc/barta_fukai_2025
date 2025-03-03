@@ -338,7 +338,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
 
     # Define reset rules
-    if rech >= 0:
+    if recharge >= 0:
         if reset_potential:
             reset = '''
             H1 += a1
@@ -607,12 +607,9 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         logging.info(f"Excitatory neurons firing rate during chunk: ({mean_rate_exc} +/- {rate_std_exc})Hz")
         logging.info(f"Inhibitory neurons firing rate during chunk: ({mean_rate_inh} +/- {rate_std_inh})Hz")
 
-        if recharge != 0:
-            rate_diff = target_rate / mean_rate_exc
-            if recharge > 0:
-                G_exc.neuron_target_rate = np.clip((4*G_exc.neuron_target_rate + G_exc.neuron_target_rate * rate_diff) / 5, a_min=0, a_max=target_rate)
-            elif recharge < 0:
-                G_exc.neuron_target_rate = np.clip((4*G_exc.neuron_target_rate + G_exc.neuron_target_rate * rate_diff) / 5, a_min=target_rate, a_max=None)
+        if recharge != 0 and learning_rate > 0:
+            rate_diff = target_rate - mean_rate_exc
+            G_exc.neuron_target_rate = np.clip(G_exc.neuron_target_rate + rate_diff*0.1, a_min=0, a_max=None)
             logging.info(f"Target rate adjusted to {np.mean(G_exc.neuron_target_rate):.2f}")
 
         # Append to HDF5

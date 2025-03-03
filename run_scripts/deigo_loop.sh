@@ -1,6 +1,6 @@
 #!/bin/bash
 
-conditions=("hebb_recharge_plus" "hebb_recharge_minus" "hebb_recharge_plus_strong" "hebb_recharge_minus_strong")
+conditions=("hebb_recharge_plus" "hebb_recharge_minus_strong" "hebb_recharge_minus")
 patterns=(1000 1200 1400 1600 1800 2000)
 run_id=$$
 simulation_id="$(date +%Y%m%d_%H%M%S)_$run_id"
