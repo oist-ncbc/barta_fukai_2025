@@ -338,24 +338,42 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
 
     # Define reset rules
-
-    if reset_potential:
-        reset = '''
-        H1 += a1
-        H2 += a2
-        b_dec += 1
-        x += (1-q*rech)**8
-        q = 1
-        v = EL
-        '''
+    if rech >= 0:
+        if reset_potential:
+            reset = '''
+            H1 += a1
+            H2 += a2
+            b_dec += 1
+            x += (1-np.exp(-xx/0.05))**8 * rech + (1-rech)
+            q = 1
+            v = EL
+            '''
+        else:
+            reset = '''
+            H1 += a1
+            H2 += a2
+            b_dec += 1
+            x += (1-np.exp(-xx/0.05))**8 * rech + (1-rech)
+            q = 1
+            '''
     else:
-        reset = '''
-        H1 += a1
-        H2 += a2
-        b_dec += 1
-        x += (1-q*rech)**8
-        q = 1
-        '''
+        if reset_potential:
+            reset = '''
+            H1 += a1
+            H2 += a2
+            b_dec += 1
+            x += (1-np.exp(-xx/0.05))**8 * rech + 1
+            q = 1
+            v = EL
+            '''
+        else:
+            reset = '''
+            H1 += a1
+            H2 += a2
+            b_dec += 1
+            x += (1-np.exp(-xx/0.05))**8 * rech + 1
+            q = 1
+            '''
 
     if plasticity == 'threshold':
         reset_exc = reset + '''

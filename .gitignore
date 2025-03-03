@@ -14,6 +14,7 @@ __pycache__/
 
 # Ignore logs, debug outputs, hdf5 and pkl files
 logs/
+tmp/
 *.log
 *.out
 *.err
@@ -29,6 +30,7 @@ logs/
 *.~*
 .DS_Store
 
-# Ignore notebooks and figures
+# Ignore notebooks, workspaces, and figures
 img/
 *.ipynb
+StructuredInhibition.code-workspace

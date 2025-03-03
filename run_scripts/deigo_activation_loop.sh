@@ -1,7 +1,7 @@
 #!/bin/bash
 
-systems=("hebb_recharge_minus_strong" "hebb_recharge_plus_strong")
-runs=("spontaneous" "spontaneous_learning")
+systems=("hebb_recharge_plus_strong")
+runs=("spontaneous")
 patterns=(1000 1200 1400 1600 1800 2000)
 run_id=$$
 

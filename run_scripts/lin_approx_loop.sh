@@ -1,6 +1,6 @@
 #!/bin/bash
 
-conditions=("hebb_recharge_plus_strong" "hebb_recharge_minus_strong")
+conditions=("hebb_recharge_plus_strong")
 patterns=(1000 1200 1400 1600 1800 2000)
 
 for condition in "${conditions[@]}"; do
