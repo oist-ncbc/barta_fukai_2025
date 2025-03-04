@@ -1,20 +1,41 @@
 import h5py
 import argparse
-from multiprocessing import Pool
+from multiprocessing import Pool, get_logger
 import logging
 
 from utils import *
 from analysis import get_spike_counts
 
 
+# def get_activations(offset):
+#     _, sc = get_spike_counts(*spikes, max_t, dt=0.1, offset=offset*0.01)
+
+#     activations = []
+#     for i in range(npat):
+#         activations.append((sc[patterns[i]] > 0).mean(axis=0))
+
+#     return np.array(activations)
+
 def get_activations(offset):
-    _, sc = get_spike_counts(*spikes, max_t, dt=0.1, offset=offset*0.01)
+    process_logger = get_logger()
+    process_logger.info(f"Processing offset {offset}, memory: {memory_usage()}")
 
-    activations = []
-    for i in range(npat):
-        activations.append((sc[patterns[i]] > 0).mean(axis=0))
+    try:
+        _, sc = get_spike_counts(*spikes, max_t, dt=0.1, offset=offset * 0.01)
 
-    return np.array(activations)
+        activations = []
+        for i in range(npat):
+            activations.append((sc[patterns[i]] > 0).mean(axis=0))
+
+            if i // 100 == 0:
+                process_logger.info(f"Offset {offset}: {i} patterns processed")
+
+        process_logger.info(f"Completed offset {offset}, memory: {memory_usage()}")
+        return np.array(activations)
+
+    except Exception as e:
+        process_logger.error(f"Error processing offset {offset}: {e}")
+        return None
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

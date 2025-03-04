@@ -2,7 +2,7 @@
 #SBATCH -p short
 #SBATCH -t 1:00:00
 #SBATCH --mem=128G
-#SBATCH -c 10
+#SBATCH -c 5
 #SBATCH -C xeon
 #SBATCH --open-mode=append
 
