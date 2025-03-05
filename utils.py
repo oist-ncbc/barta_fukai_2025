@@ -108,6 +108,7 @@ def load_connectivity(filename):
 
     return connectivity
 
+
 def plot_covariance_ellipse(mean, cov, ax=None, confidence=0.95, **line_kwargs):
     """
     Plots the confidence ellipse of a 2D normally distributed dataset.

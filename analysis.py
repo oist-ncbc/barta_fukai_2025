@@ -1,8 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 import argparse
 import pickle
+
+from utils import *
 
 
 def get_spike_counts(spike_indices, spike_times, t_max, N=8000, dt=0.1, offset=0):
@@ -12,6 +15,26 @@ def get_spike_counts(spike_indices, spike_times, t_max, N=8000, dt=0.1, offset=0
     histdata, *_ = np.histogram2d(spike_indices, spike_times, [bins_indices, bins_time])
 
     return bins_time, histdata
+
+def get_firing_rates(system, npat, folder='lognormal', batch_size=100):
+    path_to_folder = f"{data_path()}/{folder}"
+    filename = f"{path_to_folder}/{system}_spontaneous{npat}.h5"
+
+    rates_exc = []
+    rates_inh = []
+
+    with h5py.File(filename, 'r', swmr=True) as h5f:
+        N_exc = h5f['connectivity'].attrs['N_exc']
+        N_inh = h5f['connectivity'].attrs['N_inh']
+
+        spikes_exc = h5f['spikes_exc'][:].T
+        spikes_inh = h5f['spikes_exc'][:].T
+        max_t = h5f.attrs['simulation_time']
+
+    rates_exc = pd.Series(spikes_exc[0]).value_counts().sort_index().values / max_t
+    rates_inh = pd.Series(spikes_inh[0]).value_counts().sort_index().values / max_t
+
+    return rates_exc, rates_inh
 
 def get_pattern_activations(spike_counts, patterns):
     activations = []
