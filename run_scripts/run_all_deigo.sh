@@ -42,9 +42,9 @@ log_file_spont="../../logs/${run_id}/${condition}/${num}/spont.log"
 job_id_spont=$(sbatch --parsable --dependency=afterok:"$job_id_train" --output "$log_file_spont" --error "$log_file_spont" run_scripts/simulation_job.slurm "$num" "$condition" spontaneous)
 echo "SLURM JOB ID: $job_id_spont" >> "$log_file_spont"
 
-log_file_spont_learn="../../logs/${run_id}/${condition}/${num}/spont_learn.log"
-job_id_spont_learn=$(sbatch --parsable --dependency=afterok:"$job_id_train" --output "$log_file_spont_learn" --error "$log_file_spont_learn" run_scripts/simulation_job.slurm "$num" "$condition" spontaneous_learning)
-echo "SLURM JOB ID: $job_id_spont_learn" >> "$log_file_spont_learn"
+# log_file_spont_learn="../../logs/${run_id}/${condition}/${num}/spont_learn.log"
+# job_id_spont_learn=$(sbatch --parsable --dependency=afterok:"$job_id_train" --output "$log_file_spont_learn" --error "$log_file_spont_learn" run_scripts/simulation_job.slurm "$num" "$condition" spontaneous_learning)
+# echo "SLURM JOB ID: $job_id_spont_learn" >> "$log_file_spont_learn"
 
 log_file_perturbation="../../logs/${run_id}/${condition}/${num}/perturbation.log"
 job_id_perturbation=$(sbatch --parsable --dependency=afterok:"$job_id_gstats" --output="$log_file_perturbation" --error="$log_file_perturbation" run_scripts/perturbation_job.slurm "$num" "$condition")
