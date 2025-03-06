@@ -1,6 +1,7 @@
 #!/bin/bash
 
 systems=(
+    "hebb"
     "hebb_recharge_minus_strong_tr2.0"
     "hebb_recharge_minus_strong_tr2.1"
     "hebb_recharge_minus_strong_tr2.2"

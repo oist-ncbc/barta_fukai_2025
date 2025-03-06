@@ -47,29 +47,32 @@ def get_firing_rates(system, npat, folder='lognormal', interval=None, which='ei'
 
     return rates
 
-def get_firing_rates(system, npat, folder='lognormal', batch_size=100, which='ei'):
+def get_mean_exc(system, npat, folder='lognormal', interval=None, which='ei'):
     path_to_folder = f"{data_path()}/{folder}"
     filename = f"{path_to_folder}/{system}_spontaneous{npat}.h5"
 
-    rates_exc = []
-    rates_inh = []
-
     with h5py.File(filename, 'r', swmr=True) as h5f:
         N_exc = h5f['connectivity'].attrs['N_exc']
-        N_inh = h5f['connectivity'].attrs['N_inh']
+        # N_inh = h5f['connectivity'].attrs['N_inh']
 
-        spikes_exc = h5f['spikes_exc'][:].T
-        spikes_inh = h5f['spikes_exc'][:].T
+        num_exc_spikes = h5f['spikes_exc'].shape[0]
+        # spikes_inh = h5f['spikes_exc'][:].T
         max_t = h5f.attrs['simulation_time']
 
-    rates = {}
+    return (num_exc_spikes / max_t / N_exc).item()
+    # if interval is None:
+    #     interval = (0, max_t)
 
-    if 'e' in which:
-        rates['exc'] = pd.Series(spikes_exc[0]).value_counts().sort_index().values / max_t
-    if 'i' in which:
-        rates['inh'] = pd.Series(spikes_inh[0]).value_counts().sort_index().values / max_t
+    # rates = {}
 
-    return rates
+    # if 'e' in which:
+    #     mask = (spikes_exc[1] >= interval[0]) & (spikes_exc[1] < interval[1])
+    #     rates['exc'] = pd.Series(spikes_exc[0][mask]).value_counts().sort_index().values / max_t
+    # if 'i' in which:
+    #     mask = (spikes_inh[1] >= interval[0]) & (spikes_inh[1] < interval[1])
+    #     rates['inh'] = pd.Series(spikes_inh[0][mask]).value_counts().sort_index().values / max_t
+
+    # return rates
 
 def get_pattern_activations(spike_counts, patterns):
     activations = []

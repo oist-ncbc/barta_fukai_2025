@@ -26,13 +26,13 @@ mkdir -p "../../logs/${run_id}"
 mkdir -p "../../logs/${run_id}/${condition}"
 mkdir -p "../../logs/${run_id}/${condition}/${num}"
 
-# Submit SLURM jobs and capture job IDs
-log_file_train="../../logs/${run_id}/${condition}/${num}/train.log"
-job_id_train=$(sbatch --parsable --output="$log_file_train" --error="$log_file_train" run_scripts/cond_job.slurm "$num" "$condition")
-echo "SLURM JOB ID: $job_id_train" >> "$log_file_train"
+# # Submit SLURM jobs and capture job IDs
+# log_file_train="../../logs/${run_id}/${condition}/${num}/train.log"
+# job_id_train=$(sbatch --parsable --output="$log_file_train" --error="$log_file_train" run_scripts/cond_job.slurm "$num" "$condition")
+# echo "SLURM JOB ID: $job_id_train" >> "$log_file_train"
 
 log_file_gstats="../../logs/${run_id}/${condition}/${num}/gstats.log"
-job_id_gstats=$(sbatch --parsable --dependency=afterok:"$job_id_train" --output="$log_file_gstats" --error="$log_file_gstats" run_scripts/gstats_job.slurm "$num" "$condition")
+job_id_gstats=$(sbatch --parsable --output="$log_file_gstats" --error="$log_file_gstats" run_scripts/gstats_job.slurm "$num" "$condition")
 echo "SLURM JOB ID: $job_id_gstats" >> "$log_file_gstats"
 
 # log_file_spont="../../logs/${run_id}/${condition}/${num}/spont.log"

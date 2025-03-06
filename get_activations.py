@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     npat = args.patterns
 
-    activations = np.array(Pool(processes=10).map(get_activations, range(10)))
+    activations = np.array(Pool(processes=5).map(get_activations, range(10)))
     activations = np.transpose(activations, (1,2,0)).reshape((args.patterns,-1))
 
     logging.info(
@@ -97,8 +97,8 @@ if __name__ == '__main__':
 
     for i in range(args.patterns):
         change = np.diff((activations[i] > 0.9).astype(float))
-        starts = np.argwhere(change == -1).flatten()
-        ends = np.argwhere(change == 1).flatten()
+        starts = np.argwhere(change == 1).flatten()
+        ends = np.argwhere(change == -1).flatten()
 
         if ends.size > 0:
             starts = starts[starts < ends[-1]]
@@ -110,11 +110,14 @@ if __name__ == '__main__':
             pattern_ixs.extend([i]*starts.size)
             durations.extend(ends - starts)
 
-    activations_sparse = np.array([
-        act_times,
-        durations,
-        pattern_ixs
-    ])
+    try:
+        activations_sparse = np.array([
+            act_times,
+            durations,
+            pattern_ixs
+        ])
+    except:
+        import pdb; pdb.set_trace()
 
     output_file = f"{folder}/{args.system}_{args.run}{args.patterns}_activations.h5"
 
