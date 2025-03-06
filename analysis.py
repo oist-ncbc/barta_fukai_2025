@@ -12,11 +12,13 @@ def get_spike_counts(spike_indices, spike_times, t_max, N=8000, dt=0.1, offset=0
     bins_indices = np.arange(-0.5, N, 1) + offset
     bins_time = np.arange(0, t_max+dt/10, dt) + offset*dt
 
-    histdata, *_ = np.histogram2d(spike_indices, spike_times, [bins_indices, bins_time])
+    mask = spike_times < t_max
+
+    histdata, *_ = np.histogram2d(spike_indices[mask], spike_times[mask], [bins_indices, bins_time])
 
     return bins_time, histdata
 
-def get_firing_rates(system, npat, folder='lognormal', batch_size=100):
+def get_firing_rates(system, npat, folder='lognormal', interval=None, which='ei'):
     path_to_folder = f"{data_path()}/{folder}"
     filename = f"{path_to_folder}/{system}_spontaneous{npat}.h5"
 
@@ -31,10 +33,43 @@ def get_firing_rates(system, npat, folder='lognormal', batch_size=100):
         spikes_inh = h5f['spikes_exc'][:].T
         max_t = h5f.attrs['simulation_time']
 
-    rates_exc = pd.Series(spikes_exc[0]).value_counts().sort_index().values / max_t
-    rates_inh = pd.Series(spikes_inh[0]).value_counts().sort_index().values / max_t
+    if interval is None:
+        interval = (0, max_t)
 
-    return rates_exc, rates_inh
+    rates = {}
+
+    if 'e' in which:
+        mask = (spikes_exc[1] >= interval[0]) & (spikes_exc[1] < interval[1])
+        rates['exc'] = pd.Series(spikes_exc[0][mask]).value_counts().sort_index().values / max_t
+    if 'i' in which:
+        mask = (spikes_inh[1] >= interval[0]) & (spikes_inh[1] < interval[1])
+        rates['inh'] = pd.Series(spikes_inh[0][mask]).value_counts().sort_index().values / max_t
+
+    return rates
+
+def get_firing_rates(system, npat, folder='lognormal', batch_size=100, which='ei'):
+    path_to_folder = f"{data_path()}/{folder}"
+    filename = f"{path_to_folder}/{system}_spontaneous{npat}.h5"
+
+    rates_exc = []
+    rates_inh = []
+
+    with h5py.File(filename, 'r', swmr=True) as h5f:
+        N_exc = h5f['connectivity'].attrs['N_exc']
+        N_inh = h5f['connectivity'].attrs['N_inh']
+
+        spikes_exc = h5f['spikes_exc'][:].T
+        spikes_inh = h5f['spikes_exc'][:].T
+        max_t = h5f.attrs['simulation_time']
+
+    rates = {}
+
+    if 'e' in which:
+        rates['exc'] = pd.Series(spikes_exc[0]).value_counts().sort_index().values / max_t
+    if 'i' in which:
+        rates['inh'] = pd.Series(spikes_inh[0]).value_counts().sort_index().values / max_t
+
+    return rates
 
 def get_pattern_activations(spike_counts, patterns):
     activations = []
