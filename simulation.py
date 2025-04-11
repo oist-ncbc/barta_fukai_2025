@@ -33,10 +33,7 @@ if __name__ == '__main__':
 
     folder_path = f"{server_config['data_path']}/{run['folder']}"
 
-    if args.ii:
-        input_file = f"{folder_path}/{system['name']}_train_ii{args.patterns}.h5"
-    else:
-        input_file = f"{folder_path}/{system['name']}_train{args.patterns}.h5"
+    input_file = f"{folder_path}/{system['name']}_train{args.patterns}.h5"
     output_file = f"{folder_path}/{system['name']}_{run['name']}{args.patterns}.h5"
 
     with h5py.File(input_file, "r", swmr=True) as src, h5py.File(output_file, "w") as dest:
