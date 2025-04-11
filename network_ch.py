@@ -77,7 +77,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
                 target_rate, plasticity, background_poisson, poisson_amplitude, output_file,
                 simulation_time, learning_rate, state_variables=None, stimuli=None,
                 thresholds=None, seed_num=42, tau_stdp_ms=20, recharge=0, save_weights=False,
-                isolate=None, chunk_size=None):
+                isolate=None, chunk_size=None, plast_ii=False):
     """
     Simulates a spiking neural network with customizable plasticity rules and input stimuli.
 
@@ -397,12 +397,8 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
                         events={'burst': 'b_dec > 3'})
     G_inh = NeuronGroup(N_inh, eqs, threshold='v > theta', reset=reset, method=updater, refractory=refrac)
 
-    if recharge == 0:
-        G_exc.neuron_target_rate = target_rate
-    elif recharge < 0:
-        G_exc.neuron_target_rate = target_rate
-    elif recharge > 0:
-        G_exc.neuron_target_rate = target_rate
+    G_exc.neuron_target_rate = target_rate
+    G_exc.neuron_target_rate = 10
 
     G_exc.rech = recharge
     G_inh.rech = 0
@@ -486,6 +482,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         # ___________________________________
 
         pre_eqs_inh, post_eqs_inh = ei_plasticity_eqs(plasticity, learning_rate)
+        pre_eqs_ii, post_eqs_ii = ei_plasticity_eqs('hebb', learning_rate)
 
         # Initiate synapses
         # _________________________
@@ -495,10 +492,14 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
             alpha : 1
             '''
 
-        Sii = Synapses(G_inh, G_inh, model='w : 1', on_pre='gi += w*nS', method='exponential_euler')
         See = Synapses(G_exc, G_exc, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
         Sie = Synapses(G_exc, G_inh, model='w : 1', on_pre='ge += w*nS', method='exponential_euler')
         Sei = Synapses(G_inh, G_exc, model=model_ei, on_pre=pre_eqs_inh, on_post=post_eqs_inh, method='exponential_euler')
+
+        if plast_ii:
+            Sii = Synapses(G_inh, G_inh, model=model_ei, on_pre=pre_eqs_ii, on_post=post_eqs_ii, method='exponential_euler')
+        else:
+            Sii = Synapses(G_inh, G_inh, model='w : 1', on_pre='gi += w*nS', method='exponential_euler')
 
         # connect synapses
         synapses = {
@@ -548,9 +549,26 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
     num_chunks = int(np.ceil(simulation_time / chunk_size))
 
-    logging.info(f"Starting network simulation for {simulation_time}s in {num_chunks} chunks of {chunk_size}s each.")
+    
+
+    # Activate patterns
+    # ___________________________
+
+    if stimuli is not None:
+        logging.info(f"Setting up stimulus.")
+        stim_dt = 0.1
+        rm = get_stim_matrix(stimuli, N_exc, simulation_time, dt=stim_dt) * 10
+        ta = TimedArray(rm.T*kHz, dt=stim_dt*second)
+        G_ext = PoissonGroup(N_exc, rates='ta(t,i)')
+        Syn_ext = Synapses(G_ext, G_exc, model='w : 1', on_pre='ge += w*nS')
+        Syn_ext.connect(i='j')
+        Syn_ext.w = poisson_amplitude
+    else:
+        logging.info(f"No stimulus specified.")
 
     net = Network(collect())
+
+    logging.info(f"Starting network simulation for {simulation_time}s in {num_chunks} chunks of {chunk_size}s each.")
 
     for ii in range(num_chunks):
         start_time = time.time()
@@ -564,19 +582,6 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
             state_inh_mon = StateMonitor(G_inh[:], state_variables, record=True, dt=1*ms)
             net.add(state_exc_mon, state_inh_mon)
 
-        # Activate patterns
-        # ___________________________
-
-        if stimuli is not None:
-            stim_dt = 0.1
-            rm = get_stim_matrix(stimuli, N_exc, chunk_size, dt=stim_dt) * 10
-            ta = TimedArray(rm.T*kHz, dt=stim_dt*second)
-            G_ext = PoissonGroup(N_exc, rates='ta(t-elapsed_time*second,i)')
-            Syn_ext = Synapses(G_ext, G_exc, model='w : 1', on_pre='ge += w*nS')
-            Syn_ext.connect(i='j')
-            Syn_ext.w = poisson_amplitude
-
-            net.add(G_ext, Syn_ext)
 
         net.run(chunk_size*second)
 
@@ -648,10 +653,11 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         del spikes_exc_mon
         del spikes_inh_mon
 
-        if stimuli is not None:
-            net.remove(G_ext, Syn_ext)
-            del G_ext
-            del Syn_ext
+        # if stimuli is not None:
+        #     net.remove(G_ext, Syn_ext, ta)
+        #     del G_ext
+        #     del Syn_ext
+        #     del ta
 
         gc.collect()
 
@@ -742,3 +748,6 @@ if __name__ == '__main__':
     )
 
     run_n_save(simulation_params, args, matrix_file=args.input, output=args.output, matrix_out=args.matrix)
+
+
+    # Facilitating synapses

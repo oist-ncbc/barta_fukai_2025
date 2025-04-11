@@ -1,8 +1,10 @@
 #!/bin/bash
 
-conditions=("hebb")
-runs=("spontaneous" )
-patterns=(2500 3000)
+conditions=(
+    "hebb"
+    "rate")
+runs=("stimuli100ms")
+patterns=(10000)
 run_id=$$
 
 for condition in "${conditions[@]}"; do

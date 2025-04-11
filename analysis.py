@@ -9,8 +9,8 @@ from utils import *
 
 
 def get_spike_counts(spike_indices, spike_times, t_max, N=8000, dt=0.1, offset=0):
-    bins_indices = np.arange(-0.5, N, 1) + offset
-    bins_time = np.arange(0, t_max+dt/10, dt) + offset*dt
+    bins_indices = np.arange(-0.5, N, 1)
+    bins_time = np.arange(0, t_max+dt/10, dt) - offset*dt
 
     mask = spike_times < t_max
 
@@ -30,7 +30,7 @@ def get_firing_rates(system, npat, folder='lognormal', interval=None, which='ei'
         N_inh = h5f['connectivity'].attrs['N_inh']
 
         spikes_exc = h5f['spikes_exc'][:].T
-        spikes_inh = h5f['spikes_exc'][:].T
+        spikes_inh = h5f['spikes_inh'][:].T
         max_t = h5f.attrs['simulation_time']
 
     if interval is None:
@@ -40,12 +40,36 @@ def get_firing_rates(system, npat, folder='lognormal', interval=None, which='ei'
 
     if 'e' in which:
         mask = (spikes_exc[1] >= interval[0]) & (spikes_exc[1] < interval[1])
-        rates['exc'] = pd.Series(spikes_exc[0][mask]).value_counts().sort_index().values / max_t
+        rates['exc'] = pd.Series(spikes_exc[0][mask]).value_counts().reindex(np.arange(N_exc), fill_value=0).values / max_t
     if 'i' in which:
         mask = (spikes_inh[1] >= interval[0]) & (spikes_inh[1] < interval[1])
-        rates['inh'] = pd.Series(spikes_inh[0][mask]).value_counts().sort_index().values / max_t
+        rates['inh'] = pd.Series(spikes_inh[0][mask]).value_counts().reindex(np.arange(N_exc), fill_value=0).values / max_t
 
     return rates
+
+def get_fano(system, npat, folder='lognormal', interval=None, which='ei'):
+    path_to_folder = f"{data_path()}/{folder}"
+    filename = f"{path_to_folder}/{system}_spontaneous{npat}.h5"
+
+    rates_exc = []
+    rates_inh = []
+
+    with h5py.File(filename, 'r', swmr=True) as h5f:
+        N_exc = h5f['connectivity'].attrs['N_exc']
+        N_inh = h5f['connectivity'].attrs['N_inh']
+
+        spikes_exc = h5f['spikes_exc'][:].T
+        spikes_inh = h5f['spikes_inh'][:].T
+        max_t = h5f.attrs['simulation_time']
+
+    if interval is not None:
+        max_t = interval
+
+    _, sc = get_spike_counts(*spikes_exc, max_t, N_exc, dt=0.1)
+
+    fanos = sc.var(axis=1) / sc.mean(axis=1)
+
+    return fanos
 
 def get_mean_exc(system, npat, folder='lognormal', interval=None, which='ei'):
     path_to_folder = f"{data_path()}/{folder}"

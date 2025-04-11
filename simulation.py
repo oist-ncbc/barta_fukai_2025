@@ -7,7 +7,7 @@ import numpy as np
 
 from network_ch import run_network
 from single_neuron import run_network as sn_run
-from utils import load_connectivity, load_patterns
+from utils import load_connectivity, load_patterns, create_stim_tuples
 
 
 if __name__ == '__main__':
@@ -33,8 +33,8 @@ if __name__ == '__main__':
 
     folder_path = f"{server_config['data_path']}/{run['folder']}"
 
-    if run['init_matrix'] is not None:
-        input_file  = f"{folder_path}/{run['init_matrix']}{args.patterns}.h5"
+    if args.ii:
+        input_file = f"{folder_path}/{system['name']}_train_ii{args.patterns}.h5"
     else:
         input_file = f"{folder_path}/{system['name']}_train{args.patterns}.h5"
     output_file = f"{folder_path}/{system['name']}_{run['name']}{args.patterns}.h5"
@@ -43,7 +43,7 @@ if __name__ == '__main__':
         # Copy a group from source to destination
         src.copy("/connectivity", dest)  # Copies to the root of destination
 
-    connectivity = load_connectivity(output_file)
+    connectivity = load_connectivity(system['name'], npat=args.patterns)
 
     if type(system['target_rate']) == str:
         target_rate = np.loadtxt(f"config/rates/{system['target_rate']}_{args.patterns}.csv")
@@ -51,14 +51,17 @@ if __name__ == '__main__':
         target_rate = system['target_rate']
 
     if run['stimulus'] is not None:
-        patterns = load_patterns(output_file)
-        stimulus_tuples = load_stim_file(
-            run['stimulus']['file'],
-            patterns[:],
-            fraction=args.stim_frac)
+        # patterns = load_patterns(system['name'], npat=args.patterns)
+        # stimulus_tuples = create_stim_tuples(
+        #     patterns=patterns,
+        #     fraction=args.stim_frac,
+        #     nstim=run['stimulus']['nstim']
+        # )
+
+        with open(run['stimulus'], 'rb') as f:
+            stimulus_tuples = pickle.load(f)
     else:
         stimulus_tuples = None
-
 
     simulation_params = dict(
         **connectivity,

@@ -80,7 +80,10 @@ def create_weight_dataset(group, name, data, dtype=None):
         compression="gzip"  # Enable compression
     )[:] = data  # Assign data after creation
 
-def load_connectivity(filename):
+def load_connectivity(system, npat, folder='lognormal'):
+    path_to_folder = f"{data_path()}/{folder}"
+    filename = f"{path_to_folder}/{system}_perturbation{npat}.h5"
+
     connectivity = {}
     weights = {}
     delays = {}
@@ -162,6 +165,9 @@ class Patterns:
             return [self.indices[self.pointers[i]:self.pointers[i+1]] for i in range(start, stop, step)]
         return self.indices[self.pointers[ix]:self.pointers[ix+1]]
     
+    def __len__(self):
+        return self.n
+    
     def sizes(self):
             return np.diff(self.pointers)
 
@@ -184,6 +190,9 @@ class Patterns:
 
         return Patterns(new_indices, self.splits, self.neurons)
     
+    def overlap(self, a, b):
+        return np.isin(self[a], self[b]).sum()
+    
 
 def load_patterns(system, npat, run='train', folder='lognormal'):
     path_to_folder = f"{data_path()}/{folder}"
@@ -203,6 +212,26 @@ def load_linear(system, npat, folder='lognormal'):
     filename = f"{path_to_folder}/{system}{npat}.csv"
 
     return pd.read_csv(filename, index_col=[0,1])
+
+def create_stim_tuples(patterns, fraction, nstim, duration=0.1, spacing=1):
+    t = 1
+    tuples = []
+    
+    for i in range(nstim):
+        pat = patterns[i%len(patterns)]
+        rand_pat = np.random.permutation(8000)[:len(pat)]
+        num_indices = int(len(pat) * fraction)
+        ind_ix = np.random.permutation(len(pat))[:num_indices]
+
+        tuples.append((t, t+duration, pat[ind_ix]))
+
+        t += spacing
+
+        # tuples.append((t, t+duration, rand_pat[ind_ix]))
+
+        # t += spacing
+
+    return tuples
 
 def load_stim_file(filename, patterns, fraction):
     stims = pd.read_csv(filename, header=None, index_col=False).values

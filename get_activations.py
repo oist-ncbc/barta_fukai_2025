@@ -22,8 +22,10 @@ def get_activations(offset):
     logger = logging.getLogger()
     logger.info(f"Processing offset {offset}, memory: {memory_usage()}")
 
+    # patterns = load_patterns('hebb', npat)
+
     try:
-        _, sc = get_spike_counts(*spikes, max_t, dt=0.1, offset=offset * 0.01)
+        _, sc = get_spike_counts(*spikes, max_t, dt=0.1, offset=offset * 0.1)
 
         activations = []
         for i in range(npat):
@@ -84,7 +86,7 @@ if __name__ == '__main__':
 
     npat = args.patterns
 
-    activations = np.array(Pool(processes=5).map(get_activations, range(10)))
+    activations = np.array(Pool(processes=5).map(get_activations, np.arange(10)[::-1]))
     activations = np.transpose(activations, (1,2,0)).reshape((args.patterns,-1))
 
     logging.info(

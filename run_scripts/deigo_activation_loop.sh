@@ -2,27 +2,9 @@
 
 systems=(
     "hebb"
-    "hebb_recharge_minus_strong_tr2.0"
-    "hebb_recharge_minus_strong_tr2.1"
-    "hebb_recharge_minus_strong_tr2.2"
-    "hebb_recharge_minus_strong_tr2.3"
-    "hebb_recharge_minus_strong_tr2.4"
-    "hebb_recharge_minus_strong_tr2.5"
-    "hebb_recharge_minus_strong_tr2.6"
-    "hebb_recharge_minus_strong_tr2.7"
-    "hebb_recharge_plus_strong_tr1.5"
-    "hebb_recharge_plus_strong_tr1.6"
-    "hebb_recharge_plus_strong_tr1.7"
-    "hebb_recharge_plus_strong_tr1.8"
-    "hebb_recharge_plus_strong_tr1.9"
-    "hebb_recharge_plus_strong_tr2.0"
-    "hebb_recharge_plus_strong_tr2.1"
-    "hebb_recharge_plus_strong_tr2.2"
-    "hebb_recharge_plus_strong_tr2.3"
-    "hebb_recharge_plus_strong_tr2.4"
-    "hebb_recharge_plus_strong_tr2.5")
-runs=("spontaneous")
-patterns=(1000 1200 1400 1600 1800 2000)
+    "rate")
+runs=("spontaneous" "spontaneous_learning")
+patterns=(800 2200 2400 2600 2800 3000)
 run_id=$$
 
 for system in "${systems[@]}"; do

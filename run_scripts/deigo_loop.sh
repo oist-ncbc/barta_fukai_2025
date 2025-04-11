@@ -1,26 +1,9 @@
 #!/bin/bash
 
 conditions=(
-    "hebb_recharge_minus_strong_tr2.0"
-    "hebb_recharge_minus_strong_tr2.1"
-    "hebb_recharge_minus_strong_tr2.2"
-    "hebb_recharge_minus_strong_tr2.3"
-    "hebb_recharge_minus_strong_tr2.4"
-    "hebb_recharge_minus_strong_tr2.5"
-    "hebb_recharge_minus_strong_tr2.6"
-    "hebb_recharge_minus_strong_tr2.7"
-    "hebb_recharge_plus_strong_tr1.5"
-    "hebb_recharge_plus_strong_tr1.6"
-    "hebb_recharge_plus_strong_tr1.7"
-    "hebb_recharge_plus_strong_tr1.8"
-    "hebb_recharge_plus_strong_tr1.9"
-    "hebb_recharge_plus_strong_tr2.0"
-    "hebb_recharge_plus_strong_tr2.1"
-    "hebb_recharge_plus_strong_tr2.2"
-    "hebb_recharge_plus_strong_tr2.3"
-    "hebb_recharge_plus_strong_tr2.4"
-    "hebb_recharge_plus_strong_tr2.5")
-patterns=(1000 1200 1400 1600 1800 2000)
+    "rate_ii"
+    "hebb_ii")
+patterns=(800 1000 1200 1400 1600 1800 2000)
 run_id=$$
 simulation_id="$(date +%Y%m%d_%H%M%S)_$run_id"
 
