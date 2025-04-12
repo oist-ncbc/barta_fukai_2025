@@ -44,7 +44,8 @@ if __name__ == '__main__':
         # Copy a group from source to destination
         src.copy("/connectivity", dest)  # Copies to the root of destination
 
-    connectivity = load_connectivity(system['name'], npat=args.patterns)
+    connectivity = load_connectivity(output_file)
+    # connectivity = load_connectivity(system['name'], npat=args.patterns)
 
     if type(system['target_rate']) == str:
         target_rate = np.loadtxt(f"config/rates/{system['target_rate']}_{args.patterns}.csv")
