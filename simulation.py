@@ -34,6 +34,10 @@ if __name__ == '__main__':
     folder_path = f"{server_config['data_path']}/{run['folder']}"
 
     input_file = f"{folder_path}/{system['name']}_train{args.patterns}.h5"
+    if run['init_matrix'] is not None:
+        input_file  = f"{folder_path}/{run['init_matrix']}{args.patterns}.h5"
+    else:
+        input_file = f"{folder_path}/{system['name']}_train{args.patterns}.h5"
     output_file = f"{folder_path}/{system['name']}_{run['name']}{args.patterns}.h5"
 
     with h5py.File(input_file, "r", swmr=True) as src, h5py.File(output_file, "w") as dest:
