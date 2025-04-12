@@ -398,7 +398,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
     G_inh = NeuronGroup(N_inh, eqs, threshold='v > theta', reset=reset, method=updater, refractory=refrac)
 
     G_exc.neuron_target_rate = target_rate
-    G_exc.neuron_target_rate = 10
+    G_inh.neuron_target_rate = 10
 
     G_exc.rech = recharge
     G_inh.rech = 0
