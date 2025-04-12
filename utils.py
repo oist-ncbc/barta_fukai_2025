@@ -82,7 +82,7 @@ def create_weight_dataset(group, name, data, dtype=None):
 
 def load_connectivity(system, run, npat, folder='lognormal'):
     path_to_folder = f"{data_path()}/{folder}"
-    filename = f"{path_to_folder}/{system}_{run}perturbation{npat}.h5"
+    filename = f"{path_to_folder}/{system}_{run}{npat}.h5"
 
     connectivity = {}
     weights = {}
