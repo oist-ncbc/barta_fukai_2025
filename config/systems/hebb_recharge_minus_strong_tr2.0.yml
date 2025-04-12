@@ -8,7 +8,7 @@ neuron :
 background:
   background_poisson : 2
   poisson_amplitude : 0.3
-target_rate : 3
+target_rate : 2
 prefix : lognorm
 folder : sp1
-name : hebb_recharge_minus_strong
+name : hebb_recharge_minus_strong_tr2.0
