@@ -241,7 +241,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
     tau_bmon = 20*second
     tidip = 160*ms
     tau_rate = 10*second  # set very long rate integration for smooth rate estimate
-    tau_coincidence = 50*ms
+    tau_coincidence = 150*ms
     # ________________________
 
     if isolate is not None:

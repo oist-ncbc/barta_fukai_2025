@@ -1,10 +1,9 @@
 #!/bin/bash
 
 systems=(
-    "hebb"
-    "rate")
+    "rate_ii")
 runs=("spontaneous" "spontaneous_learning")
-patterns=(800 2200 2400 2600 2800 3000)
+patterns=(800 1000 1200 1400 1600 1800 2000)
 run_id=$$
 
 for system in "${systems[@]}"; do
