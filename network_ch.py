@@ -275,7 +275,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
             for inp in input_list:
                 if isolate['inh_stim']:
-                    input_arr_inh = np.append(input_arr_inh, pair*inp)
+                    input_arr_inh = np.append(input_arr_inh, pair*inp*2)
                     input_arr_exc = np.append(input_arr_exc, np.zeros(stim_steps))
 
         simulation_time = len(input_arr_exc) * step_time

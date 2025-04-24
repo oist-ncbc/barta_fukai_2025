@@ -5,7 +5,7 @@ run:
 isolate:
   exc_stim: True
   inh_stim: True
-  stim_count: 500
+  stim_count: 1000
 stimulus: null
 name: perturbation
 save_matrix: False
