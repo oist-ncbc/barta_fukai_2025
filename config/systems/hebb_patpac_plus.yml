@@ -8,7 +8,7 @@ neuron :
 background:
   background_poisson : 2
   poisson_amplitude : 0.3
-target_rate : patpac_plus
+target_rate : patpacsize_plus
 prefix : lognorm
 folder : sp1
-name : patpac_plus
+name : patpacsize_plus
