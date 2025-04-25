@@ -108,7 +108,7 @@ if __name__ == '__main__':
     # "hebb_recharge_plus_strong_tr2.4",
     # "hebb_recharge_plus_strong_tr2.5"]
 
-    systems = ['patpatsize_plus','patpacsize_minus']
+    systems = ['patpacsize_plus','patpacsize_minus']
 
     pat_counts = [
         800, 1000, 1200, 1400, 1600, 1800, 2000

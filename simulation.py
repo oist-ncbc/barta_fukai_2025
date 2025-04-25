@@ -48,7 +48,7 @@ if __name__ == '__main__':
     connectivity = load_connectivity(system['name'], run['name'], npat=args.patterns)
 
     if type(system['target_rate']) == str:
-        target_rate = np.loadtxt(f"config/rates/{system['target_rate']}{args.patterns}.csv")
+        target_rate = np.loadtxt(f"config/rates/{system['target_rate']}_{args.patterns}.csv")
     else:
         target_rate = system['target_rate']
 
