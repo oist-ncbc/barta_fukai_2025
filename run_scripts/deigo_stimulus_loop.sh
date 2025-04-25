@@ -1,7 +1,9 @@
 #!/bin/bash
 
 conditions=(
-    "hebb_smooth_rate")
+    "hebb"
+    "patpacsize_minus"
+    "patpacsize_plus")
 runs=("stimuli100ms")
 patterns=(10000)
 run_id=$$
