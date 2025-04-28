@@ -5,7 +5,7 @@ conditions=(
     "patpacsize_minus"
     "patpacsize_plus")
 runs=("stimuli100ms")
-patterns=(10000)
+patterns=(800 1000 1200 1400 1600 1800 2000)
 run_id=$$
 
 for condition in "${conditions[@]}"; do

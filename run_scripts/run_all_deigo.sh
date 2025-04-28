@@ -30,21 +30,21 @@ mkdir -p "../../logs/${run_id}/${condition}/${num}"
 
 # Submit SLURM jobs and capture job IDs
 
-# log_file_train="../../logs/${run_id}/${condition}/${num}/train.log"
-# job_id_train=$(sbatch --parsable --output="$log_file_train" --error="$log_file_train" run_scripts/train_and_cond_job.slurm "$num" "$condition")
-# echo "SLURM JOB ID: $job_id_train" >> "$log_file_train"
-
-# log_file_gstats="../../logs/${run_id}/${condition}/${num}/gstats.log"
-# job_id_gstats=$(sbatch --parsable --dependency=afterok:"$job_id_train" --output="$log_file_gstats" --error="$log_file_gstats" run_scripts/gstats_job.slurm "$num" "$condition")
-# echo "SLURM JOB ID: $job_id_gstats" >> "$log_file_gstats"
+log_file_train="../../logs/${run_id}/${condition}/${num}/train.log"
+job_id_train=$(sbatch --parsable --output="$log_file_train" --error="$log_file_train" run_scripts/train_and_cond_job.slurm "$num" "$condition")
+echo "SLURM JOB ID: $job_id_train" >> "$log_file_train"
 
 log_file_gstats="../../logs/${run_id}/${condition}/${num}/gstats.log"
-job_id_gstats=$(sbatch --parsable --output="$log_file_gstats" --error="$log_file_gstats" run_scripts/gstats_job.slurm "$num" "$condition")
+job_id_gstats=$(sbatch --parsable --dependency=afterok:"$job_id_train" --output="$log_file_gstats" --error="$log_file_gstats" run_scripts/gstats_job.slurm "$num" "$condition")
 echo "SLURM JOB ID: $job_id_gstats" >> "$log_file_gstats"
 
-# log_file_spont="../../logs/${run_id}/${condition}/${num}/spont.log"
-# job_id_spont=$(sbatch --parsable --dependency=afterok:"$job_id_train" --output "$log_file_spont" --error "$log_file_spont" run_scripts/simulation_job.slurm "$num" "$condition" spontaneous)
-# echo "SLURM JOB ID: $job_id_spont" >> "$log_file_spont"
+# log_file_gstats="../../logs/${run_id}/${condition}/${num}/gstats.log"
+# job_id_gstats=$(sbatch --parsable --output="$log_file_gstats" --error="$log_file_gstats" run_scripts/gstats_job.slurm "$num" "$condition")
+# echo "SLURM JOB ID: $job_id_gstats" >> "$log_file_gstats"
+
+log_file_spont="../../logs/${run_id}/${condition}/${num}/spont.log"
+job_id_spont=$(sbatch --parsable --dependency=afterok:"$job_id_train" --output "$log_file_spont" --error "$log_file_spont" run_scripts/simulation_job.slurm "$num" "$condition" spontaneous)
+echo "SLURM JOB ID: $job_id_spont" >> "$log_file_spont"
 
 # log_file_spont_learn="../../logs/${run_id}/${condition}/${num}/spont_learn.log"
 # job_id_spont_learn=$(sbatch --parsable --dependency=afterok:"$job_id_train" --output "$log_file_spont_learn" --error "$log_file_spont_learn" run_scripts/simulation_job.slurm "$num" "$condition" spontaneous_learning)

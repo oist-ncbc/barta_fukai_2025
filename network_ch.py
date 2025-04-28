@@ -557,7 +557,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
     if stimuli is not None:
         logging.info(f"Setting up stimulus.")
         stim_dt = 0.1
-        rm = get_stim_matrix(stimuli, N_exc, simulation_time, dt=stim_dt) * 1
+        rm = get_stim_matrix(stimuli, N_exc, simulation_time, dt=stim_dt) * 10
         ta = TimedArray(rm.T*kHz, dt=stim_dt*second)
         G_ext = PoissonGroup(N_exc, rates='ta(t,i)')
         Syn_ext = Synapses(G_ext, G_exc, model='w : 1', on_pre='ge += w*nS')
