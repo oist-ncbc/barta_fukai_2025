@@ -1,8 +1,8 @@
 #!/bin/bash
 
 systems=(
-    "patpacsize_plus"
-    "patpacsize_minus")
+    "patpacsize_plus05"
+    "patpacsize_minus05")
 runs=("spontaneous")
 patterns=(800 1000 1200 1400 1600 1800 2000)
 run_id=$$

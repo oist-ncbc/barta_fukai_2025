@@ -638,9 +638,6 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
                     h5f[f"state/exc/{variable}"][-variable_exc_data.shape[0]:] = variable_exc_data
                     h5f[f"state/inh/{variable}"][-variable_inh_data.shape[0]:] = variable_inh_data
 
-                del state_exc_mon
-                del state_inh_mon
-
             if save_weights:
             # with h5py.File(output_file, "a") as h5f:  # Open file in append mode
                 grp = h5f.require_group("connectivity/weights/EI")
@@ -652,6 +649,11 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         net.remove(spikes_exc_mon, spikes_inh_mon)
         del spikes_exc_mon
         del spikes_inh_mon
+
+        if state_variables is not None:
+            net.remove(state_exc_mon, state_inh_mon)
+            del state_exc_mon
+            del state_inh_mon
 
         # if stimuli is not None:
         #     net.remove(G_ext, Syn_ext, ta)

@@ -54,10 +54,11 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--patterns', type=int)
     parser.add_argument('-r', '--run', type=str)
     parser.add_argument('-s', '--system', type=str)
+    parser.add_argument('--offset', type=float, default=10)
 
-    stabilization_offset = 10
 
     args = parser.parse_args()
+    stabilization_offset = args.offset
 
     logging.basicConfig(
         level=logging.INFO,
@@ -102,15 +103,21 @@ if __name__ == '__main__':
         starts = np.argwhere(change == 1).flatten()
         ends = np.argwhere(change == -1).flatten()
 
+        # if i == 462:
+        #     import pdb; pdb.set_trace()
+
         if ends.size > 0:
             starts = starts[starts < ends[-1]]
             if starts.size > 0:
                 ends = ends[ends > starts[0]]
         
-        if starts.size > 0:
-            act_times.extend(starts)
-            pattern_ixs.extend([i]*starts.size)
-            durations.extend(ends - starts)
+            if starts.size > 0:
+                act_times.extend(starts)
+                pattern_ixs.extend([i]*starts.size)
+                durations.extend(ends - starts)
+        
+        if len(durations) != len(act_times):
+            import pdb; pdb.set_trace()
 
     try:
         activations_sparse = np.array([

@@ -108,10 +108,12 @@ if __name__ == '__main__':
     # "hebb_recharge_plus_strong_tr2.4",
     # "hebb_recharge_plus_strong_tr2.5"]
 
-    systems = ['patpacsize_plus','patpacsize_minus']
+    # systems = ['patpacsize_plus05','patpacsize_minus05']
+
+    systems = ['hebb', 'rate']
 
     pat_counts = [
-        800, 1000, 1200, 1400, 1600, 1800, 2000
+        10000
     ]
 
     tasks = [(system, npat, len(systems) * len(pat_counts) - i) for i, (system, npat) in enumerate([(s, p) for p in pat_counts for s in systems])]
