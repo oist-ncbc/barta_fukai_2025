@@ -1,8 +1,9 @@
 #!/bin/bash
 
 conditions=(
-    "hebb_smooth_rate")
-patterns=(800 2200 2400 2600 2800 3000)
+    "patpacsize_minus05"
+    "patpacsize_plus05")
+patterns=(800 1000 1200 1400 1600 1800 2000)
 run_id=$$
 simulation_id="$(date +%Y%m%d_%H%M%S)_$run_id"
 
