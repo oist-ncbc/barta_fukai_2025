@@ -77,7 +77,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
                 target_rate, plasticity, background_poisson, poisson_amplitude, output_file,
                 simulation_time, learning_rate, state_variables=None, stimuli=None,
                 thresholds=None, seed_num=42, tau_stdp_ms=20, recharge=0, save_weights=False,
-                isolate=None, chunk_size=None, plast_ii=False):
+                isolate=None, chunk_size=None, plast_ii=False, inhf=None):
     """
     Simulates a spiking neural network with customizable plasticity rules and input stimuli.
 
@@ -287,7 +287,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         gext_inh = TimedArray(input_arr_inh * nS, dt=step_time*second)
         # _________________________________
     else:
-        Isyn = 'Isyn = -(ge)*(v-Ee)-(gi)*(v-Ei) : amp'
+        Isyn = 'Isyn = -(ge)*(v-Ee)-inhf*(gi)*(v-Ei) : amp'
         dgedt = 'dge/dt = -ge/taue : siemens'
         dgidt = 'dgi/dt = -gi/taue : siemens'
         mu_e = ''
@@ -329,6 +329,8 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
     network_rate : 1
     neuron_target_rate : 1
     rech : 1
+    inhf : 1
+    max_theta : volt
     {mu_e}
     {mu_i}
     {sigma_e}
@@ -393,9 +395,12 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
     else:
         updater = 'exponential_euler'
 
-    G_exc = NeuronGroup(N_exc, eqs, threshold='v > theta', reset=reset_exc, method=updater, refractory=refrac,
+    G_exc = NeuronGroup(N_exc, eqs, threshold='v > clip(theta, -100*mV, max_theta)', reset=reset_exc, method=updater, refractory=refrac,
                         events={'burst': 'b_dec > 3'})
-    G_inh = NeuronGroup(N_inh, eqs, threshold='v > theta', reset=reset, method=updater, refractory=refrac)
+    G_inh = NeuronGroup(N_inh, eqs, threshold='v > clip(theta, -100*mV, max_theta)', reset=reset, method=updater, refractory=refrac)
+
+    G_exc.max_theta = 0*mV
+    G_inh.max_theta = 0*mV
 
     G_exc.neuron_target_rate = target_rate
     G_inh.neuron_target_rate = 10
@@ -446,6 +451,13 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         G_exc.basethr = thresholds*mV
 
     G_inh.basethr = omega
+
+    if inhf is None:
+        G_exc.inhf = 1
+        G_inh.inhf = 1
+    else:
+        G_exc.inhf = inhf
+        G_inh.inhf = 1
     # ________________
 
 
@@ -526,6 +538,8 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         'gi': nS,
         'y': 1,
         'theta': mV,
+        'H1': mV,
+        'H2': mV,
         'x': 1,
         'b_dec': 1,
         'b_mon': 1

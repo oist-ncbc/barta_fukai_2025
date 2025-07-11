@@ -25,11 +25,22 @@ def despine_ax(ax, where=None, remove_ticks=None):
 
     if remove_ticks is not None:
         if 'b' in where:
-            ax.set_xticks([])
+            # ax.set_xticks([])
             ax.set_xticklabels([])
+            for tick in ax.xaxis.get_major_ticks():
+                tick.tick1line.set_visible(False)
+                tick.tick2line.set_visible(False)
+                tick.label1.set_visible(False)
+                tick.label2.set_visible(False)
         if 'l' in where:
-            ax.set_yticks([])
+            # ax.set_yticks([])
             ax.set_yticklabels([])
+
+            for tick in ax.yaxis.get_major_ticks():
+                tick.tick1line.set_visible(False)
+                tick.tick2line.set_visible(False)
+                tick.label1.set_visible(False)
+                tick.label2.set_visible(False)
 
     to_despine = []
 
@@ -194,7 +205,7 @@ class Patterns:
         return np.isin(self[a], self[b]).sum()
     
 
-def load_patterns(system, npat, run='train', folder='lognormal'):
+def load_patterns(npat, system='hebb', run='train', folder='lognormal'):
     path_to_folder = f"{data_path()}/{folder}"
     filename = f"{path_to_folder}/{system}_{run}{npat}.h5"
 
@@ -213,14 +224,17 @@ def load_linear(system, npat, folder='lognormal'):
 
     return pd.read_csv(filename, index_col=[0,1])
 
-def create_stim_tuples(patterns, fraction, nstim, duration=0.1, spacing=1):
+def create_stim_tuples(patterns, num_indices, nstim, duration=0.1, spacing=1):
     t = 1
     tuples = []
     
     for i in range(nstim):
         pat = patterns[i%len(patterns)]
-        rand_pat = np.random.permutation(8000)[:len(pat)]
-        num_indices = int(len(pat) * fraction)
+        # rand_pat = np.random.permutation(8000)[:len(pat)]
+        # num_indices = int(len(pat) * fraction)
+        if num_indices is None:
+            num_indices = len(pat)
+
         ind_ix = np.random.permutation(len(pat))[:num_indices]
 
         tuples.append((t, t+duration, pat[ind_ix]))
@@ -251,3 +265,9 @@ def load_stim_file(filename, patterns, fraction):
             tuples.append((x[0], x[1], rand_pt[ind_ix]))
 
     return tuples
+
+def load_linear(system, npat):
+    return pd.read_csv(f'{data_path()}/lognormal/linear_approx/{system}{npat}.csv', index_col=[0,1])
+
+def load_conduct(system, npat):
+    return pd.read_csv(f'{data_path()}/lognormal/var_stats/{system}_conductances{npat}_stats.csv', index_col=[0,1])

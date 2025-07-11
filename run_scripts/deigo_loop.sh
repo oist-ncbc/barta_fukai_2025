@@ -1,8 +1,7 @@
 #!/bin/bash
 
 conditions=(
-    "patpacsize_minus05"
-    "patpacsize_plus05")
+    "hebb_nonadapt")
 patterns=(800 1000 1200 1400 1600 1800 2000)
 run_id=$$
 simulation_id="$(date +%Y%m%d_%H%M%S)_$run_id"

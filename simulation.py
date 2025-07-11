@@ -53,6 +53,9 @@ if __name__ == '__main__':
         target_rate = system['target_rate']
 
     if run['stimulus'] is not None:
+        patterns = load_patterns(npat=args.patterns)
+        print(run['stimulus'])
+        stimulus_tuples = create_stim_tuples(patterns=patterns, nstim=args.patterns, **run['stimulus'])
         # patterns = load_patterns(system['name'], npat=args.patterns)
         # stimulus_tuples = create_stim_tuples(
         #     patterns=patterns,
@@ -60,10 +63,14 @@ if __name__ == '__main__':
         #     nstim=run['stimulus']['nstim']
         # )
 
-        with open(run['stimulus'], 'rb') as f:
-            stimulus_tuples = pickle.load(f)
+        # with open(run['stimulus'], 'rb') as f:
+        #     stimulus_tuples = pickle.load(f)
     else:
         stimulus_tuples = None
+
+    if 'neuron' in run:
+        for key, val in run['neuron'].items():
+            system['neuron'][key] = val
 
     simulation_params = dict(
         **connectivity,
