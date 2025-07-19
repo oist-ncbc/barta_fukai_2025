@@ -1,12 +1,10 @@
 #!/bin/bash
 
 systems=(
-    "hebb"
-    "hebb_smooth_rate"
-    "rate"
-    )
-runs=("conductances_long")
-patterns=(1600)
+    "patpacsize_plus05"
+    "patpacsize_minus05")
+runs=("spontaneous")
+patterns=(800 1000 1200 1400 1600 1800 2000)
 run_id=$$
 
 for system in "${systems[@]}"; do

@@ -1,8 +1,11 @@
 #!/bin/bash
 
 conditions=(
-    "hebb_nonadapt")
-patterns=(800 1000 1200 1400 1600 1800 2000)
+    "hebb"
+    "hebb_smooth_rate"
+    "rate"
+    )
+patterns=(200 400 600)
 run_id=$$
 simulation_id="$(date +%Y%m%d_%H%M%S)_$run_id"
 

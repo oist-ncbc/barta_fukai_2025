@@ -2,9 +2,10 @@
 
 conditions=(
     "hebb"
-    "patpacsize_minus"
-    "patpacsize_plus")
-runs=("stimuli100ms")
+    "hebb_smooth_rate"
+    "rate"
+    )
+runs=("stimuli100ms_persist_frac")
 patterns=(800 1000 1200 1400 1600 1800 2000)
 run_id=$$
 

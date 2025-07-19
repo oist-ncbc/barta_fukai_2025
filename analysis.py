@@ -11,6 +11,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def load_activation(system, npat, run='spontaneous', namespace='lognormal'):
+    folder = f"{data_path()}/{namespace}"
+    filename = f"{folder}/{system}_{run}{npat}_activations.h5"
+
+    with h5py.File(filename, "r", swmr=True) as h5f:
+        act_times, durations, pattern_ixs = h5f['activations'][:]
+
+    return act_times, durations, pattern_ixs
+
+
+def get_act_counts(system, npat):
+    act_times, _, pattern_ixs = load_activation(system, npat)
+    act_counts = pd.Series(pattern_ixs).value_counts().reindex(np.arange(npat), fill_value=0).values
+    return act_counts
+
+
 def get_spike_counts(spike_indices, spike_times, t_max, N=8000, dt=0.1, offset=0):
     bins_indices = np.arange(-0.5, N, 1)
     bins_time = np.arange(0, t_max+dt/10, dt) - offset*dt
