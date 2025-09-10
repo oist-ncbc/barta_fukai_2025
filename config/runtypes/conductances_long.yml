@@ -1,0 +1,9 @@
+run:
+  learning_rate : 0.
+  simulation_time : 10
+  state_variables : [ge, gi, theta]
+stimulus : null
+name : conductances_long
+save_matrix: False
+folder : lognormal
+init_matrix : null

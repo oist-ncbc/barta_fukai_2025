@@ -22,7 +22,7 @@ def get_activations(offset):
     logger = logging.getLogger()
     logger.info(f"Processing offset {offset}, memory: {memory_usage()}")
 
-    # patterns = load_patterns('hebb', npat)
+    patterns = load_patterns(npat)
 
     try:
         _, sc = get_spike_counts(*spikes, max_t, dt=0.1, offset=offset * 0.1)
@@ -70,8 +70,6 @@ if __name__ == '__main__':
     logging.info(
         f"Loading data. {memory_usage()}"
     )
-
-    patterns = load_patterns('hebb', args.patterns)
 
     with h5py.File(filename, "r", swmr=True) as h5f:
         spikes = h5f['spikes_exc'][:].T

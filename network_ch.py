@@ -77,7 +77,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
                 target_rate, plasticity, background_poisson, poisson_amplitude, output_file,
                 simulation_time, learning_rate, state_variables=None, stimuli=None,
                 thresholds=None, seed_num=42, tau_stdp_ms=20, recharge=0, save_weights=False,
-                isolate=None, chunk_size=None, plast_ii=False, inhf=None):
+                isolate=None, chunk_size=None, plast_ii=False, inhf=None, shuffle=False):
     """
     Simulates a spiking neural network with customizable plasticity rules and input stimuli.
 
@@ -253,15 +253,22 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
         sigma_e = 'sigma_e : siemens'
         sigma_i = 'sigma_i : siemens'
         rho = 'rho : 1'
+
         # Perturbative input
         #________________________
 
-        stim_steps = 5
-        step_time = 0.1
+        if isolate['strength'] == 'weak':
+            stim_steps = 5
+            step_time = 0.1
+            input_list = np.linspace(-0.35, 0.35, 8)
+        elif isolate['strength'] == 'strong':
+            stim_steps = 100
+            step_time = 0.01
+            input_list = np.array([10, 20])
+        
 
         pair = np.array([1]+[0]*(stim_steps-1))
 
-        input_list = np.linspace(-0.35, 0.35, 8)
         init_steps = stim_steps * len(input_list)
 
         input_arr_exc = np.zeros(init_steps)
@@ -285,6 +292,7 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
 
         gext = TimedArray(input_arr_exc * nS, dt=step_time*second)
         gext_inh = TimedArray(input_arr_inh * nS, dt=step_time*second)
+
         # _________________________________
     else:
         Isyn = 'Isyn = -(ge)*(v-Ee)-inhf*(gi)*(v-Ei) : amp'
@@ -525,7 +533,12 @@ def run_network(weights, exc_alpha, delays, N_exc, N_inh, alpha1, alpha2, reset_
             for post in ['E','I']:
                 label = f'{post}{pre}'
                 synapses[label].connect(i=weights[label]['sources'].astype(int), j=weights[label]['targets'].astype(int))
-                synapses[label].w = weights[label]['weights']
+
+                if (label == 'EI') and (shuffle is True):
+                    synapses[label].w = np.random.permutation(weights[label]['weights'])
+                else:
+                    synapses[label].w = weights[label]['weights']
+
                 synapses[label].delay = delays[label] * ms
 
     # Run simulation

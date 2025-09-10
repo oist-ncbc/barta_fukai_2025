@@ -55,7 +55,12 @@ if __name__ == '__main__':
     if run['stimulus'] is not None:
         patterns = load_patterns(npat=args.patterns)
         print(run['stimulus'])
+
+        if run['run']['simulation_time'] == 'full':
+            run['run']['simulation_time'] = run['stimulus']['spacing'] * (1+args.patterns)
+            
         stimulus_tuples = create_stim_tuples(patterns=patterns, nstim=args.patterns, **run['stimulus'])
+
         # patterns = load_patterns(system['name'], npat=args.patterns)
         # stimulus_tuples = create_stim_tuples(
         #     patterns=patterns,

@@ -1,0 +1,9 @@
+run:
+  learning_rate : 0.
+  simulation_time : 10
+  state_variables : [H1, H2, v]
+stimulus : null
+name : get_theta
+save_matrix: False
+folder : lognormal
+init_matrix : null

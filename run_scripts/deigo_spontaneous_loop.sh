@@ -1,8 +1,8 @@
 #!/bin/bash
 
 conditions=("hebb")
-runs=("spontaneous" )
-patterns=(2500 3000)
+runs=("spontaneous_shuffle" )
+patterns=(800 1000 1200 1400 1600 1800 2000 2200 2400 2600 2800 3000)
 run_id=$$
 
 for condition in "${conditions[@]}"; do

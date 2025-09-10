@@ -1,0 +1,9 @@
+run:
+  learning_rate : 0.
+  simulation_time : 10
+  state_variables : [v, theta]
+stimulus : null
+name : potential_threshold
+save_matrix: False
+folder : lognormal
+init_matrix : null

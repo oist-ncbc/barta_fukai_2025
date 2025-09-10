@@ -1,0 +1,10 @@
+python plotting/intro.py &
+python plotting/replay.py &
+python plotting/cued_recall.py &
+python plotting/wta.py &
+python plotting/assembly_specificity.py &
+python plotting/contamination.py &
+python plotting/eigenspectra.py &
+python plotting/fig_persistent.py &
+python plotting/supp_suscept.py &
+python plotting/overlaps_completion.py &

@@ -1,0 +1,15 @@
+run:
+  learning_rate : 0.
+  simulation_time : 2010
+  state_variables : null
+  save_weights : False
+  chunk_size : 10
+neuron:
+  alpha1 : False
+  alpha2 : 0
+stimulus :
+  num_indices : null
+  spacing : 10
+folder : lognormal
+init_matrix : null
+name : stimulus100ms_persist

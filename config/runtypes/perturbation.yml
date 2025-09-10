@@ -6,6 +6,7 @@ isolate:
   exc_stim: True
   inh_stim: True
   stim_count: 1000
+  strength: weak
 stimulus: null
 name: perturbation
 save_matrix: False

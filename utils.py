@@ -223,7 +223,16 @@ def load_linear(system, npat, folder='lognormal'):
 
     return pd.read_csv(filename, index_col=[0,1])
 
-def create_stim_tuples(patterns, num_indices, nstim, duration=0.1, spacing=1):
+def load_activation(system, npat, run='spontaneous', namespace='lognormal'):
+    folder = f"{data_path()}/{namespace}"
+    filename = f"{folder}/{system}_{run}{npat}_activations.h5"
+
+    with h5py.File(filename, "r", swmr=True) as h5f:
+        act_times, durations, pattern_ixs = h5f['activations'][:]
+
+    return act_times, durations, pattern_ixs
+
+def create_stim_tuples(patterns, num_indices, nstim, duration=0.1, spacing=1, random=False):
     t = 1
     tuples = []
     
@@ -234,7 +243,10 @@ def create_stim_tuples(patterns, num_indices, nstim, duration=0.1, spacing=1):
         if num_indices is None:
             num_indices = len(pat)
 
-        ind_ix = np.random.permutation(len(pat))[:num_indices]
+        if random:
+            ind_ix = np.random.permutation(len(pat))[:num_indices]
+        else:
+            ind_ix = np.arange(num_indices, dtype=int)
 
         tuples.append((t, t+duration, pat[ind_ix]))
 
