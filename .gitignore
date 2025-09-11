@@ -34,3 +34,8 @@ tmp/
 img/
 *.ipynb
 StructuredInhibition.code-workspace
+
+# Ignore NCBC-only scripts
+sync.sh
+simulation_screen.py
+check_servers.py
