@@ -32,7 +32,7 @@ This repository contains code to reproduce simulations of spiking neural network
 
 ## Workflow
 
-The following steps reproduce a typical experiment with **1000 memory assemblies** and the fLHP I-to-E plasticity rule. To use sLHP or GHP rule, replace `hebb` with `hebb_smooth_rate` or `rate`, respectively.
+The following steps reproduce a typical experiment with **1000 memory assemblies** and the **fLHP I-to-E plasticity rule**. To use sLHP or GHP rule, replace `hebb` with `hebb_smooth_rate` or `rate`, respectively.
 Adjust the number of assemblies with `--patterns`.
 
 ### 1. Generate connectivity matrix
