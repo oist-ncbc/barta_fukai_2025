@@ -1,0 +1,6 @@
+numpy>=1.22
+scipy>=1.8
+h5py>=3.7
+pyyaml>=6.0
+tqdm>=4.65
+scikit-learn>=1.1
