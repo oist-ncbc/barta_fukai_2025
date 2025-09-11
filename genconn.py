@@ -214,7 +214,7 @@ if __name__ == '__main__':
     parser.add_argument('--ee_sparse', type=float, default=0.05)
     parser.add_argument('--i_sparse', type=float, default=0.1)
     parser.add_argument('--i_factor', type=float, default=1)
-    parser.add_argument('--folder', type=str, default='')
+    parser.add_argument('--folder', type=str, default='lognormal')
     parser.add_argument('--name', type=str, default='')
     parser.add_argument('--var', type=float, default=0.5)
     parser.add_argument('--spread', type=float, default=0)
