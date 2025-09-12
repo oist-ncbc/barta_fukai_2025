@@ -10,8 +10,8 @@ The workflow includes generating network connectivity, running spiking simulatio
 1. Clone this repository:
 
    ```bash
-   git clone <your_repo_url>
-   cd <your_repo_name>
+   git clone https://github.com/oist-ncbc/barta_fukai_2025.git
+   cd barta_fukai_2025
    ```
 
 2. Create and activate a virtual environment:
