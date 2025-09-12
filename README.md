@@ -27,6 +27,7 @@ This repository contains code to reproduce simulations of spiking neural network
    * `yaml`
    * `tqdm`
    * `scikit-learn`
+   * `brian2`
 
 ---
 
