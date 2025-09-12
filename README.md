@@ -1,6 +1,7 @@
 # Inhibitory Plasticity and Memory Replay Simulations
 
 This repository contains code to reproduce simulations of spiking neural networks stabilized with different inhibitory plasticity rules.
+The workflow includes generating network connectivity, running spiking simulations, detecting assembly activations, and approximating effective connectivity with linearized neuron sensitivities.
 
 ---
 
@@ -9,32 +10,30 @@ This repository contains code to reproduce simulations of spiking neural network
 1. Clone this repository:
 
    ```bash
-   git clone https://github.com/oist-ncbc/barta_fukai_2025.git
-   cd barta_fukai_2025
+   git clone <your_repo_url>
+   cd <your_repo_name>
    ```
 
-2. Install dependencies:
+2. Create and activate a virtual environment:
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate   # on Linux/Mac
+   venv\Scripts\activate      # on Windows
+   ```
+
+3. Install dependencies from `requirements.txt`:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-   Required packages include:
-
-   * `numpy`
-   * `scipy`
-   * `h5py`
-   * `yaml`
-   * `tqdm`
-   * `scikit-learn`
-   * `brian2`
-
 ---
 
 ## Workflow
 
-The following steps reproduce a typical experiment with **1000 memory assemblies** and the **fLHP I-to-E plasticity rule**. To use sLHP or GHP rule, replace `hebb` with `hebb_smooth_rate` or `rate`, respectively.
-Adjust the number of assemblies with `--patterns`.
+The following steps reproduce a typical experiment with **1000 memory assemblies**.
+Adjust the number of assemblies with `--patterns` as needed.
 
 ### 1. Generate connectivity matrix
 
@@ -48,7 +47,7 @@ python genconn.py --patterns 1000
 
 ### 2. Train the network with fLHP inhibitory plasticity
 
-Run training for 2000 s.
+Run training for **2000 s** with the Vogels & Sprekeler rule (`fLHP`).
 
 ```bash
 python simulation.py \
@@ -61,7 +60,7 @@ python simulation.py \
 
 ### 3. Spontaneous activity
 
-Run the network without external training input for 10,000 s to obtain spontaneous activity without plasticity.
+Run the network without external training input for **10,000 s** to obtain spontaneous replay.
 
 ```bash
 python simulation.py \
@@ -139,7 +138,15 @@ python linear_sensitivity.py
 
 * Configurations are organized under `config/systems/` (network setup) and `config/runtypes/` (simulation protocols).
 * Simulation logs and outputs are stored in HDF5 format for efficient handling of large datasets.
-* The `analysis/` folder contains scripts to process the raw data
-* the `plotting/` folder contains scripts to recreate the manuscript figures.
+* The `analysis/` folder contains scripts to process the raw data as well as plotting scripts to generate the figures used in the manuscript.
+* Figures and further analyses (e.g., eigenvalue spectra, replay diversity) can be generated using the analysis scripts in this repository.
 
 ---
+
+## Citation
+
+If you use this code, please cite:
+
+**Barta & Fukai (2025).**
+*Memory-specific E-I balance supports diverse replay and mitigates catastrophic forgetting.*
+\[arXiv / Nat. Comm. reference here]
