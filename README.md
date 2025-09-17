@@ -137,8 +137,8 @@ python linear_sensitivity.py
 ## Notes
 
 * Configurations are organized under `config/systems/` (network setup) and `config/runtypes/` (simulation protocols).
-* Simulation logs and outputs are stored in HDF5 format for efficient handling of large datasets.
-* The `analysis/` folder contains scripts to process the raw data as well as plotting scripts to generate the figures used in the manuscript.
+* The `analysis/` folder contains scripts to process the raw data
+* The `plotting/` folder contains scripts to process the generate the figures used in the manuscript from the analyzed data.
 * Figures and further analyses (e.g., eigenvalue spectra, replay diversity) can be generated using the analysis scripts in this repository.
 
 ---
