@@ -142,11 +142,3 @@ python linear_sensitivity.py
 * Figures and further analyses (e.g., eigenvalue spectra, replay diversity) can be generated using the analysis scripts in this repository.
 
 ---
-
-## Citation
-
-If you use this code, please cite:
-
-**Barta & Fukai (2025).**
-*Memory-specific E-I balance supports diverse replay and mitigates catastrophic forgetting.*
-\[arXiv / Nat. Comm. reference here]
