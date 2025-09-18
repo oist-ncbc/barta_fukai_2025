@@ -78,7 +78,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--patterns', type=int)
     parser.add_argument('-r', '--run', type=str)
     parser.add_argument('--system', type=str, required=True)
-    parser.add_argument('--namespace', type=str, required=True)
+    parser.add_argument('--namespace', type=str, default='lognormal')
     parser.add_argument('--offset', type=float, default=10)
 
     args = parser.parse_args()

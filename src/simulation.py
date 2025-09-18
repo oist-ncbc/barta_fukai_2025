@@ -18,7 +18,7 @@ if __name__ == '__main__':
     parser.add_argument('--run', type=str, required=True)
     parser.add_argument('--patterns', type=int, required=True)
     parser.add_argument('--stim_frac', type=float, default=1)
-    parser.add_argument('--namespace', type=str, required=True)
+    parser.add_argument('--namespace', type=str, default='lognormal')
 
     args = parser.parse_args()
 

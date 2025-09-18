@@ -14,9 +14,8 @@ This module contains helper functions used throughout the project to:
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
-from utils import *  # brings in data_path(), possibly h5py via utils, etc.
+from utils import *
 
 import logging
 logger = logging.getLogger(__name__)

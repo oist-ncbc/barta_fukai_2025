@@ -93,7 +93,7 @@ def process_batch(data):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--namespace', type=str, required=True, help="Data namespace folder under data_path")
+    parser.add_argument('--namespace', type=str, default='lognormal', help="Data namespace folder under data_path")
     parser.add_argument('--name', type=str, required=True, help="Base filename prefix (system/run identifier)")
     parser.add_argument('--patterns', type=int, required=True, help="Number of patterns used in filename")
 

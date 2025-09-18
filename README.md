@@ -40,7 +40,7 @@ Adjust the number of assemblies with `--patterns` as needed.
 Hebbian terms in excitatory–excitary connections are computed, and the strongest ones are selected. Lognormal weights are assigned to create the base connectivity.
 
 ```bash
-python genconn.py --patterns 1000
+python src/genconn.py --patterns 1000
 ```
 
 ---
@@ -50,7 +50,7 @@ python genconn.py --patterns 1000
 Run training for **2000 s** with the Vogels & Sprekeler rule (`fLHP`).
 
 ```bash
-python simulation.py \
+python src/simulation.py \
   --system config/systems/hebb.yml \
   --run config/runtypes/default_train.yml \
   --patterns 1000
@@ -63,7 +63,7 @@ python simulation.py \
 Run the network without external training input for **10,000 s** to obtain spontaneous replay.
 
 ```bash
-python simulation.py \
+python src/simulation.py \
   --system config/systems/hebb.yml \
   --run config/runtypes/spontaneous.yml \
   --patterns 1000
@@ -76,7 +76,7 @@ python simulation.py \
 Identify transient replays of assemblies from the spontaneous activity.
 
 ```bash
-python get_activations.py \
+python src/get_activations.py \
   --patterns 1000 \
   --system hebb \
   --run spontaneous
@@ -89,7 +89,7 @@ python get_activations.py \
 Run a simulation that records excitatory (`g_e`) and inhibitory (`g_i`) synaptic conductances.
 
 ```bash
-python simulation.py \
+python src/simulation.py \
   --system config/systems/hebb.yml \
   --run config/runtypes/conductances.yml \
   --patterns 1000
@@ -102,7 +102,7 @@ python simulation.py \
 Use the Minimum Covariance Determinant (MCD) estimator to extract robust statistics of synaptic input.
 
 ```bash
-python gstats_multiproc.py \
+python src/gstats_multiproc.py \
   --name hebb_conductances \
   --folder lognormal \
   --patterns 1000
@@ -115,7 +115,7 @@ python gstats_multiproc.py \
 Run the network with isolated neurons and small perturbations to excitatory and inhibitory input.
 
 ```bash
-python simulation.py \
+python src/simulation.py \
   --system config/systems/hebb.yml \
   --run config/runtypes/perturbation.yml \
   --patterns 1000
@@ -129,7 +129,9 @@ Analyze perturbation results to compute each neuron's sensitivity to external in
 Modify parameters directly inside:
 
 ```bash
-python linear_sensitivity.py
+python src/linear_sensitivity.py \
+--system hebb
+--npat 1000
 ```
 
 ---

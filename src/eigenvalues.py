@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--system', type=str, required=True)
     parser.add_argument('--patterns', type=int, required=True)
-    parser.add_argument('--namespace', type=str, required=True)
+    parser.add_argument('--namespace', type=str, default='lognormal')
     parser.add_argument('--effective', action='store_true')
     parser.add_argument('--exc', action='store_true')
     parser.add_argument('--vals_only', action='store_true')
