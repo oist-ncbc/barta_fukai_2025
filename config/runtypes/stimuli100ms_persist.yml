@@ -10,6 +10,5 @@ neuron:
 stimulus :
   num_indices : null
   spacing : 10
-folder : lognormal
 init_matrix : null
 name : stimulus100ms_persist

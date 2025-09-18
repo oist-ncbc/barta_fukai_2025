@@ -7,6 +7,5 @@ run:
 stimulus :
   num_indices : null
   spacing : 1
-folder : lognormal
 init_matrix : null
 name : stimulus100ms_full

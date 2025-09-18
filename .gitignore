@@ -39,3 +39,4 @@ StructuredInhibition.code-workspace
 sync.sh
 simulation_screen.py
 check_servers.py
+run_scripts/

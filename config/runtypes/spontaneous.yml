@@ -4,7 +4,6 @@ run:
   state_variables : null
   save_weights : False
   chunk_size : 100
-folder : lognormal
 init_matrix : null
 stimulus : null
 name : spontaneous

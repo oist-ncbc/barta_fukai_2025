@@ -9,6 +9,4 @@ background:
   background_poisson : 2
   poisson_amplitude : 0.3
 target_rate : br_v1o
-prefix : lognorm
-folder : sp1
 name : hebb_br_v1o

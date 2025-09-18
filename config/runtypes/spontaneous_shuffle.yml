@@ -5,7 +5,6 @@ run:
   save_weights : False
   chunk_size : 100
   shuffle : True
-folder : lognormal
 init_matrix : null
 stimulus : null
 name : spontaneous_shuffle

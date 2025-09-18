@@ -3,7 +3,6 @@ run:
   simulation_time : 2000
   state_variables : null
   save_weights : True
-folder : lognormal
 init_matrix : init
 stimulus : null
 name : train

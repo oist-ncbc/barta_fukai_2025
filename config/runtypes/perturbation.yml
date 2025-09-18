@@ -10,5 +10,4 @@ isolate:
 stimulus: null
 name: perturbation
 save_matrix: False
-folder : lognormal
 init_matrix : null

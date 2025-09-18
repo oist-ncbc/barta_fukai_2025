@@ -5,5 +5,4 @@ run:
 stimulus : null
 name : conductances
 save_matrix: False
-folder : lognormal
 init_matrix : null

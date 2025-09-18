@@ -5,5 +5,4 @@ run:
 stimulus : null
 name : get_theta
 save_matrix: False
-folder : lognormal
 init_matrix : null
