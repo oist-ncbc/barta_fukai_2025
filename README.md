@@ -141,6 +141,5 @@ python src/linear_sensitivity.py \
 * Configurations are organized under `config/systems/` (network setup) and `config/runtypes/` (simulation protocols).
 * The `analysis/` folder contains scripts to process the raw data
 * The `plotting/` folder contains scripts to process the generate the figures used in the manuscript from the analyzed data.
-* Figures and further analyses (e.g., eigenvalue spectra, replay diversity) can be generated using the analysis scripts in this repository.
 
 ---
