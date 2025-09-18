@@ -1,2 +1,0 @@
-screen -dmS hebb1000 "conda activate StructuredInhibition; python simulation.py --system config/systems/hebb.yaml --run config/runtypes/default_train.yaml --patterns 1000"
-screen -dmS hebb1500 "conda activate StructuredInhibition; python simulation.py --system config/systems/hebb.yaml --run config/runtypes/default_train.yaml --patterns 1500"

@@ -1,2 +1,0 @@
-python network.py -f data/test.pkl -o data/training_homogeneous_results_narrow.pkl -t 2000 --matrix data/trained_homogeneous_matrix_narrow.pkl --eta 2e-3 --target_rate 3. --trstd 0
-python network.py -f data/trained_homogeneous_matrix_narrow.pkl -o data/trained_homogeneous_results_narrow.pkl -t 2000 --eta 0 --target_rate 3. --trstd 0
