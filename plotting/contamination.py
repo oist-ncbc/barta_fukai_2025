@@ -19,8 +19,8 @@ def plot_responses(ax, responses):
 def overlap_panel(ax, npat=1000):
     system = 'hebb'
 
-    W = get_W(system, npat)
-    patterns = load_patterns(npat)
+    W = get_W(system, npat, namespace=namespace)
+    patterns = load_patterns(npat, namespace=namespace)
 
     pattern_derivs = W[:8000,:8000] @ patterns.dense().T
 
@@ -89,6 +89,7 @@ def plot_inputs(ax, text=True):
     #     ax.axvspan((2*i+1)*100, (2*i+2)*100, alpha=0.01, lw=0)
 
 if __name__ == '__main__':
+    namespace = 'lognormal'
     contamination_color = 'navy'
     syslist = ['hebb','hebb_smooth_rate','rate']
 
@@ -200,19 +201,19 @@ if __name__ == '__main__':
     despine_ax(ax5, 't')
     despine_ax(ax51, 't')
 
-    # overlap_stats = pd.read_csv('plotting/data/overlaps/overlaps1000.csv', header=0)
-    overlap_stats = pd.read_csv('plotting/data/overlaps/angles1000.csv', header=0)
+    overlap_stats = pd.read_csv('plotting/data/overlaps/overlaps1000.csv', header=0)
+    # overlap_stats = pd.read_csv('plotting/data/overlaps/angles1000.csv', header=0)
 
-    # bins = np.linspace(0,1,80)
+    bins = np.linspace(0,1,80)
     for system in syslist:
         # ax6.hist(1-overlap_stats[system], bins=bins, color=rule_color(system), label=rule_name(system), **hist_params)
-        bins = np.linspace(40, 90, 80)
+        # bins = np.linspace(40, 90, 80)
         ax6.hist(overlap_stats[system], bins=bins, color=rule_color(system), label=rule_name(system), **hist_params)
 
     # ax6.set_xlabel('assembly contamination')
-    ax6.set_xlabel('angle')
+    ax6.set_xlabel('contamination')
     ax6.set_ylabel('density')
-    ax6.legend(loc=(0.4, 0.8))
+    ax6.legend(loc=(0.3, 0.8))
     despine_ax(ax6, 'tr')
     # ax6.set_yticks([])
 
