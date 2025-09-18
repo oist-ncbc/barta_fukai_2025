@@ -6,7 +6,9 @@ from analysis import get_spike_counts
 
 
 if __name__ == '__main__':
-    folder = f"{data_path()}/lognormal"
+    namespace = 'lognormal'
+
+    folder = data_path(namespace)
     filename = f"{folder}/hebb_perturbation1000.h5"
 
     with h5py.File(filename, "r") as h5f:

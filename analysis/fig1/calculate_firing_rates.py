@@ -15,12 +15,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--system', type=str)
+    parser.add_argument('--namespace', type=str, default='lognormal')
     parser.add_argument('--npat', type=int)
     args = parser.parse_args()
 
     logger.info(f"Arguments received: system={args.system}, npat={args.npat}")
 
-    fr = get_firing_rates(args.system, args.npat)
+    fr = get_firing_rates(args.system, args.npat, namespace=args.namespace)
     np.savetxt(f'plotting/data/firing_rates/{args.system}{args.npat}.csv', np.concatenate([fr['exc'], fr['inh']]))
     logger.info("Firing rates saved.")
 

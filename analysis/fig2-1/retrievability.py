@@ -8,8 +8,7 @@ from utils import data_path, load_patterns, create_stim_tuples
 
 
 if __name__ == '__main__':
-    # with open('data/stimuli/frac10pc1000stim.pkl', 'rb') as f:
-    #     tuples = pickle.load(f)
+    namespace = 'lognormal'
 
     res = {}
 
@@ -18,9 +17,8 @@ if __name__ == '__main__':
     for npat in [1000, 1400, 2000, 3000]:
         res[npat] = {}
         for system in tqdm(syslist):
-            folder = 'lognormal'
 
-            path_to_folder = f"{data_path()}/{folder}"
+            path_to_folder = data_path(namespace)
             filename = f"{path_to_folder}/{system}_stimulus100ms{npat}.h5"
 
             rates_exc = []
@@ -36,7 +34,7 @@ if __name__ == '__main__':
 
             nstim = min(npat, int(max_t - 1))
 
-            patterns = load_patterns(npat)
+            patterns = load_patterns(npat, namespace=namespace)
 
             tuples = create_stim_tuples(patterns, 10, npat)
 
@@ -50,7 +48,7 @@ if __name__ == '__main__':
                 'nonstim': nonstim_responses,
                 'sact': [],
                 'nsact': [],
-                'act_counts': get_act_counts(system, npat)
+                'act_counts': get_act_counts(system, npat, namespace=namespace)
             }
 
             for i in range(nstim):

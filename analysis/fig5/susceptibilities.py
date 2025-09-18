@@ -1,12 +1,14 @@
 import numpy as np
 import pandas as pd
+import h5py
 
 from utils import data_path
 from analysis import get_spike_counts
 
 
 if __name__ == '__main__':
-    folder = f"{data_path()}/lognormal"
+    namespace = 'lognormal'
+    folder = data_path(namespace)
     filename = f"{folder}/linear_approx/hebb1000.csv"
 
     pd.read_csv(filename)

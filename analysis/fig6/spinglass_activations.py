@@ -11,7 +11,7 @@ from eigenvalues import get_W
 
 
 def spike_counts(system='rate', npat=2000, max_time=1000):
-    folder = f"{data_path()}/lognormal"
+    folder = data_path(namespace)
     filename = f"{folder}/{system}_spontaneous{npat}.h5"
 
     with h5py.File(filename, "r") as h5f:
@@ -37,16 +37,17 @@ def pattern_activity(patterns, sc_exc):
 if __name__ == '__main__':
     npat = 1000
     system = 'rate'
+    namespace = 'lognormal'
 
     all_res = {}
 
     for npat, system in product([1000, 1400, 2000], ['rate','hebb']):
-        patterns = load_patterns(npat)
+        patterns = load_patterns(npat, namespace=namespace)
 
         sc_exc = spike_counts(system=system, npat=npat, max_time=1000)
         activations, patrates = pattern_activity(patterns, sc_exc[:,:10000])
 
-        W = get_W(system, npat)
+        W = get_W(system, npat, namespace=namespace)
         vals, vecs = sparse.linalg.eigs(W, k=10)
 
         # vec_ixs = [(1, -0.02), (4, 0.025), (5, -0.025), (5, 0.025)]

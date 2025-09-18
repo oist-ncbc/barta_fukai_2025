@@ -8,6 +8,7 @@ from eigenvalues import get_W
 
 if __name__ == '__main__':
     system = 'hebb'
+    namespace = 'lognormal'
 
     overlaps = {}
     pearsons = {}
@@ -17,7 +18,7 @@ if __name__ == '__main__':
 
         for npat in tqdm([1000, 1200, 1400, 1600, 1800, 2000]):
         # for npat in tqdm([3000]):
-            patterns = load_patterns(npat)
+            patterns = load_patterns(npat, namespace=namespace)
             dense_patterns = patterns.dense()
 
             dense_corrupted = dense_patterns * mask
@@ -27,9 +28,9 @@ if __name__ == '__main__':
 
             for system in ['hebb', 'hebb_smooth_rate','rate','uniform']:
                 if system == 'uniform':
-                    W = get_W('hebb', npat, exc_vals=False)
+                    W = get_W('hebb', npat, exc_vals=False, namespace=namespace)
                 else:
-                    W = get_W(system, npat, exc_vals=True)
+                    W = get_W(system, npat, exc_vals=True, namespace=namespace)
 
                 pattern_derivs = W[:8000,:8000] @ dense_corrupted.T
                 # pattern_derivs = W @ padded_patterns.T

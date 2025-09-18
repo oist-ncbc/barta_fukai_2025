@@ -77,7 +77,8 @@ if __name__ == '__main__':
 
     parser.add_argument('-p', '--patterns', type=int)
     parser.add_argument('-r', '--run', type=str)
-    parser.add_argument('-s', '--system', type=str)
+    parser.add_argument('--system', type=str, required=True)
+    parser.add_argument('--namespace', type=str, required=True)
     parser.add_argument('--offset', type=float, default=10)
 
     args = parser.parse_args()
@@ -87,8 +88,8 @@ if __name__ == '__main__':
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s")
 
-    folder = f"{data_path()}/lognormal"
-    filename = f"{folder}/{args.system}_{args.run}{args.patterns}.h5"
+    folder_path = data_path(args.namespace)
+    filename = f"{folder_path}/{args.system}_{args.run}{args.patterns}.h5"
 
     logging.info(f"Loading data. {memory_usage()}")
 
@@ -148,7 +149,7 @@ if __name__ == '__main__':
     except Exception:
         import pdb; pdb.set_trace()
 
-    output_file = f"{folder}/{args.system}_{args.run}{args.patterns}_activations.h5"
+    output_file = f"{folder_path}/{args.system}_{args.run}{args.patterns}_activations.h5"
 
     logging.info(f"Saving results to {output_file}. {memory_usage()}")
 

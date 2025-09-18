@@ -22,43 +22,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def load_activation(system, npat, run='spontaneous', namespace='lognormal'):
-    """Load activation events produced by `get_activations.py`.
-
-    Parameters
-    ----------
-    system : str
-        System identifier used in the filename (e.g., "hebb").
-    npat : int
-        Number of patterns.
-    run : str, default 'spontaneous'
-        Run tag used in the filename.
-    namespace : str, default 'lognormal'
-        Data folder (namespace) under the configured `data_path()`.
-
-    Returns
-    -------
-    tuple of numpy.ndarray
-        `(act_times, durations, pattern_ixs)` taken from the HDF5 dataset
-        `'activations'`. All arrays are 1‑D and aligned element‑wise.
-    """
-    folder = f"{data_path()}/{namespace}"
-    filename = f"{folder}/{system}_{run}{npat}_activations.h5"
-
-    # NOTE: h5py is referenced here; make sure it's available in the runtime.
-    with h5py.File(filename, "r", swmr=True) as h5f:  # type: ignore[name-defined]
-        act_times, durations, pattern_ixs = h5f['activations'][:]
-
-    return act_times, durations, pattern_ixs
-
-
-def get_act_counts(system, npat):
+def get_act_counts(system, npat, namespace, run='spontaneous'):
     """Return the number of activation events per pattern.
 
-    This is computed by loading `(act_times, durations, pattern_ixs)` and
-    counting occurrences of each pattern index in `pattern_ixs`.
+    This is computed by counting occurrences of each pattern index in `pattern_ixs`.
     """
-    act_times, _, pattern_ixs = load_activation(system, npat)
+    act_times, durations, pattern_ixs = load_activation(system, npat, namespace=namespace, run=run)
     act_counts = pd.Series(pattern_ixs).value_counts().reindex(np.arange(npat), fill_value=0).values
     return act_counts
 
@@ -106,7 +75,7 @@ def get_spike_counts(spike_indices, spike_times, t_max, N=8000, dt=0.1, offset=0
     return bins_time, histdata
 
 
-def get_firing_rates(system, npat, folder='lognormal', interval=None, which='ei'):
+def get_firing_rates(system, npat, namespace, run='spontaneous' interval=None, which='ei'):
     """Compute per‑population firing rates from a spontaneous simulation file.
 
     Parameters
@@ -115,7 +84,7 @@ def get_firing_rates(system, npat, folder='lognormal', interval=None, which='ei'
         System identifier (filename prefix).
     npat : int
         Number of patterns used in the simulation filename.
-    folder : str, default 'lognormal'
+    namespace : str, default 'lognormal'
         Data namespace folder under `data_path()`.
     interval : tuple[float, float] | None
         If `None`, use the full `[0, max_t)`; otherwise, restrict to `(t0, t1)`.
@@ -128,14 +97,10 @@ def get_firing_rates(system, npat, folder='lognormal', interval=None, which='ei'
         Keys `'exc'` and/or `'inh'` (depending on `which`), each a 1‑D array of
         per‑neuron firing rates (Hz) estimated as **spikes / max_t**.
     """
-    path_to_folder = f"{data_path()}/{folder}"
-    filename = f"{path_to_folder}/{system}_spontaneous{npat}.h5"
+    path_to_folder = data_path(namespace)
+    filename = f"{path_to_folder}/{system}_{run}{npat}.h5"
 
     logger.info(f"Loading data from {filename}")
-
-    # (Unused placeholders preserved from original code)
-    rates_exc = []
-    rates_inh = []
 
     with h5py.File(filename, 'r', swmr=True) as h5f:  # type: ignore[name-defined]
         N_exc = h5f['connectivity'].attrs['N_exc']
@@ -166,12 +131,12 @@ def get_firing_rates(system, npat, folder='lognormal', interval=None, which='ei'
     return rates
 
 
-def get_fano(system, npat, folder='lognormal', interval=None):
+def get_fano(system, npat, namespace, interval=None):
     """Compute Fano factors (variance/mean of counts) for excitatory neurons.
 
     Parameters
     ----------
-    system, npat, folder : see `get_firing_rates` for filename construction.
+    system, npat, namespace : see `get_firing_rates` for filename construction.
     interval : float | tuple | None
         If not `None`, **overrides** `max_t` (uses that horizon for binning).
 
@@ -180,7 +145,7 @@ def get_fano(system, npat, folder='lognormal', interval=None):
     numpy.ndarray
         1‑D array of Fano factors per excitatory neuron based on 100 ms bins.
     """
-    path_to_folder = f"{data_path()}/{folder}"
+    path_to_folder = data_path(namespace)
     filename = f"{path_to_folder}/{system}_spontaneous{npat}.h5"
 
     with h5py.File(filename, 'r', swmr=True) as h5f:  # type: ignore[name-defined]
@@ -200,13 +165,13 @@ def get_fano(system, npat, folder='lognormal', interval=None):
     return fanos
 
 
-def get_mean_exc(system, npat, folder='lognormal'):
+def get_mean_exc(system, npat, namespace):
     """Return the **mean excitatory firing rate** over the entire simulation.
 
     Computed as: `(total number of excitatory spikes) / (max_t * N_exc)`.
     The optional parameters `interval` and `which` are unused (kept for API symmetry).
     """
-    path_to_folder = f"{data_path()}/{folder}"
+    path_to_folder = data_path(namespace)
     filename = f"{path_to_folder}/{system}_spontaneous{npat}.h5"
 
     with h5py.File(filename, 'r', swmr=True) as h5f:
@@ -215,48 +180,3 @@ def get_mean_exc(system, npat, folder='lognormal'):
         max_t = h5f.attrs['simulation_time']
 
     return (num_exc_spikes / max_t / N_exc).item()
-
-
-def get_correlations(patterns, spike_counts, N_exc=8000, dead=100):
-    """Estimate mean pairwise correlations within patterns vs. random baselines.
-
-    Parameters
-    ----------
-    patterns : iterable
-        Each element is a boolean mask or integer index list for one pattern.
-    spike_counts : (N, T) array_like
-        Binned spike counts per neuron (e.g., from `get_spike_counts`).
-    N_exc : int, default 8000
-        Population size used when drawing random patterns for the baseline.
-    dead : int, default 100
-        Number of initial time bins to exclude (e.g., discard transients).
-
-    Returns
-    -------
-    dict
-        Dictionary with two entries:
-        - `'pat'`: mean pairwise correlation across member neurons within each pattern.
-        - `'rnd'`: same metric for size‑matched random neuron subsets.
-        Values are stored as 1‑D arrays aligned with `patterns`.
-    """
-    pattern_correlations = {}
-
-    pattern_correlations['pat'] = []
-    pattern_correlations['rnd'] = []
-
-    for pattern in tqdm(patterns):
-        # Correlations among *true* pattern members (skip initial `dead` bins)
-        corrs = np.corrcoef(spike_counts[pattern.astype(bool)][:,dead:])
-        indices = np.triu_indices_from(corrs, k=1)
-        pattern_correlations['pat'].append(np.nanmean(corrs[indices]))
-
-        # Correlations among a random subset of equal size (baseline)
-        rand_pattern = np.random.permutation(N_exc)[:int(pattern.sum())]
-        corrs = np.corrcoef(spike_counts[rand_pattern][:,dead:])
-        indices = np.triu_indices_from(corrs, k=1)
-        pattern_correlations['rnd'].append(np.nanmean(corrs[indices]))
-
-    pattern_correlations['pat'] = np.array(pattern_correlations['pat'])
-    pattern_correlations['rnd'] = np.array(pattern_correlations['rnd'])
-
-    return pattern_correlations

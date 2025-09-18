@@ -6,8 +6,6 @@ import numpy as np
 import pickle
 
 
-
-
 def cov_estimate(x, y):
     cov = np.cov(x, y)
     means = np.array([np.mean(x), np.mean(y)])

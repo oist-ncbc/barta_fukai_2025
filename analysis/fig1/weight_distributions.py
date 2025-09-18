@@ -16,13 +16,14 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--system', type=str)
+    parser.add_argument('--namespace', type=str, default='lognormal')
     parser.add_argument('--npat', type=int)
     args = parser.parse_args()
 
 
     logger.info(f"Arguments received: system={args.system}, npat={args.npat}")
 
-    W = get_W(system=args.system, npat=args.npat, exc_vals=False)
+    W = get_W(system=args.system, npat=args.npat, exc_vals=False, namespace=args.namespace)
 
     Wei = W[:8000,8000:]
     wei = Wei[Wei != 0]

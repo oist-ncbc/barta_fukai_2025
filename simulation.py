@@ -18,6 +18,7 @@ if __name__ == '__main__':
     parser.add_argument('--run', type=str, required=True)
     parser.add_argument('--patterns', type=int, required=True)
     parser.add_argument('--stim_frac', type=float, default=1)
+    parser.add_argument('--namespace', type=str, required=True)
 
     args = parser.parse_args()
 
@@ -30,7 +31,7 @@ if __name__ == '__main__':
     with open('config/server_config.yaml') as f:
         server_config = yaml.safe_load(f)
 
-    folder_path = f"{server_config['data_path']}/{run['folder']}"
+    folder_path = f"{server_config['data_path']}/{args.namespace}"
 
     input_file = f"{folder_path}/{system['name']}_train{args.patterns}.h5"
     if run['init_matrix'] is not None:

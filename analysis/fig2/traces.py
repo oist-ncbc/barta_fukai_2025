@@ -6,11 +6,11 @@ from analysis import get_spike_counts
 
 
 if __name__ == '__main__':
-    folder = 'lognormal'
+    namespace = 'lognormal'
     npat = 1800
     system = 'hebb'
 
-    path_to_folder = f"{data_path()}/{folder}"
+    path_to_folder = data_path(namespace)
     filename = f"{path_to_folder}/{system}_spontaneous{npat}.h5"
 
     rates_exc = []
@@ -29,9 +29,8 @@ if __name__ == '__main__':
     run = 'spontaneous'
     system = 'hebb'
 
-    patterns = load_patterns(npat)
-    folder = f"{data_path()}/lognormal"
-    filename = f"{folder}/{system}_{run}{npat}_activations.h5"
+    patterns = load_patterns(npat, namespace=namespace)
+    filename = f"{path_to_folder}/{system}_{run}{npat}_activations.h5"
 
     with h5py.File(filename, "r", swmr=True) as h5f:
         act_times, durations, pattern_ixs = h5f['activations'][:]

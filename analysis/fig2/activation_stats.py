@@ -6,21 +6,7 @@ from scipy.optimize import nnls
 import pickle
 
 from utils import *
-
-
-def load_activation(system, npat, run='spontaneous', namespace='lognormal'):
-    folder = f"{data_path()}/{namespace}"
-    filename = f"{folder}/{system}_{run}{npat}_activations.h5"
-
-    with h5py.File(filename, "r", swmr=True) as h5f:
-        act_times, durations, pattern_ixs = h5f['activations'][:]
-
-    return act_times, durations, pattern_ixs
-
-
-def get_act_counts(act_times, pattern_ixs, npat, measure_time=10000):
-    act_counts = pd.Series(pattern_ixs[act_times < measure_time]).value_counts().reindex(np.arange(npat), fill_value=0).values
-    return act_counts
+from analysis import get_act_counts
 
 def estimate_entropy(*x_list):
     k_list = []
@@ -46,6 +32,7 @@ def estimate_entropy(*x_list):
 
 if __name__ == '__main__':
     measure_time = 10000
+    namespace = 'lognormal'
 
     res = {}
     interpolations = {}
@@ -61,20 +48,20 @@ if __name__ == '__main__':
         for system in ['hebb','hebb_smooth_rate','rate','shuffle']:
             if system == 'shuffle':
                 run = 'spontaneous_shuffle'
-                act_times, durations, pattern_ixs = load_activation('hebb', npat, run)
+                act_times, durations, pattern_ixs = load_activation('hebb', npat, run, namespace=namespace)
             else:
                 run = 'spontaneous'
-                act_times, durations, pattern_ixs = load_activation(system, npat, run)
+                act_times, durations, pattern_ixs = load_activation(system, npat, run, namespace=namespace)
 
             splits = np.argwhere(np.diff(pattern_ixs) != 0).flatten()+1
             splitted = np.split(act_times, splits)
 
 
             if len(act_times) > 0:
-                act_counts = get_act_counts(act_times, pattern_ixs, npat, measure_time=1000000)
-                act_counts7500 = get_act_counts(act_times, pattern_ixs, npat, measure_time=750000)
-                act_counts5000 = get_act_counts(act_times, pattern_ixs, npat, measure_time=500000)
-                act_counts2500 = get_act_counts(act_times, pattern_ixs, npat, measure_time=250000)
+                act_counts = get_act_counts(act_times, pattern_ixs, npat, measure_time=1000000, namespace=namespace)
+                act_counts7500 = get_act_counts(act_times, pattern_ixs, npat, measure_time=750000, namespace=namespace)
+                act_counts5000 = get_act_counts(act_times, pattern_ixs, npat, measure_time=500000, namespace=namespace)
+                act_counts2500 = get_act_counts(act_times, pattern_ixs, npat, measure_time=250000, namespace=namespace)
 
                 if act_counts2500.sum() > 0:
                     entropy, entropy_k = estimate_entropy(act_counts2500, act_counts5000, act_counts7500, act_counts)

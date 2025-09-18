@@ -20,11 +20,22 @@ def is_numpy_float(x) -> bool:
     """Determine if a value is a NumPy floating point scalar."""
     return np.issubdtype(type(x), np.floating)
 
-def data_path() -> str:
+def data_path(namespace=None) -> str:
     """Return the configured base directory for data files."""
     with open('config/server_config.yaml') as f:
         server_config = yaml.safe_load(f)
-    return server_config['data_path']
+
+    if namespace is None:
+        return server_config['data_path']
+    else:
+        return f"{server_config['data_path']}/{namespace}"
+    
+def create_directory(folder_path):
+    try:
+        os.mkdir(folder_path)
+        print(f"Created directory '{folder_path}'.")
+    except FileExistsError:
+        pass
 
 def underscore(text: str) -> str:
     """Prefix a string with an underscore if it is non-empty."""
@@ -52,7 +63,7 @@ def create_weight_dataset(group: h5py.Group, name: str, data: np.ndarray, dtype=
         compression="gzip",
     )[:] = data
 
-def load_connectivity(system: str, run: str, npat: int, folder: str = 'lognormal') -> dict:
+def load_connectivity(system: str, run: str, npat: int, namespace: str) -> dict:
     """
     Load connectivity data from an HDF5 file.
 
@@ -64,8 +75,8 @@ def load_connectivity(system: str, run: str, npat: int, folder: str = 'lognormal
         Run identifier used in filenames.
     npat : int
         Number of patterns.
-    folder : str, optional
-        Data folder name, defaults to 'lognormal'.
+    namespace : str, optional
+        Data folder name.
 
     Returns
     -------
@@ -73,7 +84,7 @@ def load_connectivity(system: str, run: str, npat: int, folder: str = 'lognormal
         Dictionary containing weight arrays, delay arrays, excitatory adaptation parameters,
         and metadata such as the number of excitatory and inhibitory neurons.
     """
-    path_to_folder = f"{data_path()}/{folder}"
+    path_to_folder = data_path(namespace)
     filename = f"{path_to_folder}/{system}_{run}{npat}.h5"
 
     connectivity = {'weights': {}, 'delays': {}}
@@ -180,10 +191,10 @@ class Patterns:
         """Return the number of common indices between patterns a and b."""
         return np.isin(self[a], self[b]).sum()
 
-def load_patterns(npat: int, system: str = 'hebb', run: str = 'train', folder: str = 'lognormal') -> Patterns:
+def load_patterns(npat: int, namespace: str) -> Patterns:
     """Load pattern indices and splits from an HDF5 file and return a Patterns object."""
-    path_to_folder = f"{data_path()}/{folder}"
-    filename = f"{path_to_folder}/{system}_{run}{npat}.h5"
+    path_to_folder = data_path(namespace)
+    filename = f"{path_to_folder}/init{npat}.h5"
     with h5py.File(filename, "r") as h5f:
         patterns = Patterns(
             h5f['connectivity/patterns/indices'][:],
@@ -192,16 +203,16 @@ def load_patterns(npat: int, system: str = 'hebb', run: str = 'train', folder: s
         )
     return patterns
 
-def load_linear(system: str, npat: int, folder: str = 'lognormal') -> pd.DataFrame:
+def load_linear(system: str, npat: int, namespace: str) -> pd.DataFrame:
     """Load linear approximation data for a given system and number of patterns."""
-    path_to_folder = f"{data_path()}/{folder}/linear_approx"
+    path_to_folder = f"{data_path(namespace)}/linear_approx"
     filename = f"{path_to_folder}/{system}{npat}.csv"
     return pd.read_csv(filename, index_col=[0, 1])
 
 def load_activation(system: str, npat: int, run: str = 'spontaneous', namespace: str = 'lognormal'):
     """Load activation times, durations, and pattern indices from an HDF5 file."""
-    folder = f"{data_path()}/{namespace}"
-    filename = f"{folder}/{system}_{run}{npat}_activations.h5"
+    path_to_folder = data_path(namespace)
+    filename = f"{path_to_folder}/{system}_{run}{npat}_activations.h5"
     with h5py.File(filename, "r", swmr=True) as h5f:
         act_times, durations, pattern_ixs = h5f['activations'][:]
     return act_times, durations, pattern_ixs

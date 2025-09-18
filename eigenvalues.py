@@ -9,7 +9,7 @@ import argparse
 from utils import *  # data_path, load_connectivity, load_patterns, sparse, etc.
 
 
-def get_W(system, npat, effective=False, exc_vals=True):
+def get_W(system, npat, namespace, effective=False, exc_vals=True):
     """Assemble the connectivity matrix W with optional excitability scaling.
 
     Parameters
@@ -42,7 +42,7 @@ def get_W(system, npat, effective=False, exc_vals=True):
     if exc_vals:
         data = pd.read_csv(f'{data_path()}/lognormal/linear_approx/{system}{npat}.csv', index_col=[0,1])
 
-    connectivity = load_connectivity(system,'train', npat)
+    connectivity = load_connectivity(system, 'train', npat, namespace=namespace)
 
     # ---- E←E block ---------------------------------------------------------
     vals = connectivity['weights']['EE']['weights']
@@ -110,6 +110,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--system', type=str, required=True)
     parser.add_argument('--patterns', type=int, required=True)
+    parser.add_argument('--namespace', type=str, required=True)
     parser.add_argument('--effective', action='store_true')
     parser.add_argument('--exc', action='store_true')
     parser.add_argument('--vals_only', action='store_true')
@@ -120,7 +121,7 @@ if __name__ == '__main__':
     npat = args.patterns
 
     # Build W as requested (effective or full)
-    W = get_W(system, npat, args.effective)
+    W = get_W(system, npat, namespace=args.namespace, effective=args.effective)
 
     # Compute eigensystem: excitatory submatrix or full matrix
     if args.exc:
@@ -129,7 +130,10 @@ if __name__ == '__main__':
         vals, vecs = np.linalg.eig(W)
     
     # Save either values alone or values + vectors (concatenated)
+
+    create_directory(f'{data_path(args.namespace)}/eigensystem')
+
     if args.vals_only:
-        np.savetxt(f'{data_path()}/lognormal/eigensystem/{system}{npat}.csv', vals)
+        np.savetxt(f'{data_path(args.namespace)}/eigensystem/{system}{npat}.csv', vals)
     else:
-        np.savetxt(f'{data_path()}/lognormal/eigensystem/{system}{npat}.csv', np.concatenate([[vals], vecs]))
+        np.savetxt(f'{data_path(args.namespace)}/eigensystem/{system}{npat}.csv', np.concatenate([[vals], vecs]))

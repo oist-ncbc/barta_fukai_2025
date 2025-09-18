@@ -24,7 +24,7 @@ all neurons in the batch. The number of processes defaults to `cpu_count()`.
 
 Notes
 -----
-- The HDF5 is expected at: `<data_path>/<folder>/<name><patterns>.h5` and must
+- The HDF5 is expected at: `<data_path>/<namespace>/<name><patterns>.h5` and must
   contain datasets `state/exc/ge`, `state/exc/gi`, `state/inh/ge`, `state/inh/gi`.
 - The code discards the first 1000 time steps (via `[1000:, :]`) and then
   reshapes the remaining arrays to `(n_batches, batch_size, T)` after a transpose.
@@ -93,7 +93,7 @@ def process_batch(data):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--folder', type=str, required=True, default='lognormal', help="Data namespace folder under data_path")
+    parser.add_argument('--namespace', type=str, required=True, help="Data namespace folder under data_path")
     parser.add_argument('--name', type=str, required=True, help="Base filename prefix (system/run identifier)")
     parser.add_argument('--patterns', type=int, required=True, help="Number of patterns used in filename")
 
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     batch_size = 5  # number of neurons processed together per worker call
 
     # Input/Output paths
-    folder_path = f"{server_config['data_path']}/{args.folder}"
+    folder_path = data_path(args.namespace)
     input_file  = f"{folder_path}/{args.name}{args.patterns}.h5"
     output_file = f"{folder_path}/var_stats/{args.name}{args.patterns}_stats.csv"
     

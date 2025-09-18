@@ -6,8 +6,8 @@ import pickle
 from utils import *
 
 
-def get_W(system, npat):
-    connectivity = load_connectivity(system,'train', npat)
+def get_WEE(system, npat):
+    connectivity = load_connectivity(system,'train', npat, namespace=namespace)
 
     vals = connectivity['weights']['EE']['weights']
     sources = connectivity['weights']['EE']['sources']
@@ -16,38 +16,13 @@ def get_W(system, npat):
     coo = sparse.coo_array((vals, (targets, sources)))
     WEE = coo.toarray().T.T
 
-    # vals = connectivity['weights']['EI']['weights']
-    # sources = connectivity['weights']['EI']['sources']
-    # targets = connectivity['weights']['EI']['targets']
-
-    # coo = sparse.coo_array((vals, (targets, sources)))
-    # WEI = coo.toarray().T.T
-
-    # vals = connectivity['weights']['IE']['weights']
-    # sources = connectivity['weights']['IE']['sources']
-    # targets = connectivity['weights']['IE']['targets']
-
-    # coo = sparse.coo_array((vals, (targets, sources)))
-    # WIE = coo.toarray().T.T
-
-    # vals = connectivity['weights']['II']['weights']
-    # sources = connectivity['weights']['II']['sources']
-    # targets = connectivity['weights']['II']['targets']
-
-    # coo = sparse.coo_array((vals, (targets, sources)))
-    # WII = coo.toarray().T.T
-
-    # WEX = np.concatenate([WEE,WEI], axis=1)
-    # WIX = np.concatenate([WIE,WII], axis=1)
-    # W = np.concatenate([WEX,WIX], axis=0)
-
     return WEE
 
 def connectivity_stats(npat):
     system = 'hebb'
-    WEE = get_W(system, npat)
+    WEE = get_WEE(system, npat)
 
-    patterns = load_patterns(npat, system)
+    patterns = load_patterns(npat, system, namespace=namespace)
     rand_patterns = patterns.randomize()
 
     conn_probs = []
@@ -76,6 +51,7 @@ def connectivity_stats(npat):
 
 
 if __name__ == '__main__':
+    namespace = 'lognormal'
     npat_list = [800, 1000, 1200, 1400, 1600, 1800,
                  2000, 2200, 2400, 2600, 2800, 3000]
 

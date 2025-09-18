@@ -6,17 +6,18 @@ from plotutils import *
 
 
 if __name__ == '__main__':
+    namespace = 'lognormal'
     fig, ax = plt.subplots()
 
     gL = 10
 
     npat = 1000
 
-    patterns = load_patterns(npat)
+    patterns = load_patterns(npat, namespace=namespace)
 
     for system in ['hebb_smooth_rate','hebb','rate']:
-        data_lin = load_linear(system, npat).loc['exc']
-        data_con = load_conduct(system, npat).loc['exc']
+        data_lin = load_linear(system, npat, namespace=namespace).loc['exc']
+        data_con = load_conduct(system, npat, namespace=namespace).loc['exc']
 
         ax.scatter(patterns.participation(), data_lin['activation_exc'], color=rule_color(system))
 

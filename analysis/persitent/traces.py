@@ -7,12 +7,10 @@ from utils import data_path, load_patterns
 from analysis import get_spike_counts
 
 
-def load_pr(system, run):
+def load_pr(system, run, namespace):
     npat = 1000
 
-    folder = 'lognormal'
-
-    path_to_folder = f"{data_path()}/{folder}"
+    path_to_folder = data_path(namespace)
     filename = f"{path_to_folder}/{system}_{run}{npat}.h5"
 
 
@@ -24,7 +22,7 @@ def load_pr(system, run):
         spikes_inh = h5f['spikes_exc'][:].T
         max_t = h5f.attrs['simulation_time']
 
-    patterns = load_patterns(npat)
+    patterns = load_patterns(npat, namespace=namespace)
 
     nstim = min(int(max_t-1), npat)
 
@@ -44,7 +42,9 @@ def load_pr(system, run):
 
 
 if __name__ == '__main__':
-    pattern_rates, _ = load_pr('hebb_nonadapt', 'stimulus100ms_persist')
+    namespace = 'lognormal'
+
+    pattern_rates, _ = load_pr('hebb_nonadapt', 'stimulus100ms_persist', namespace=namespace)
 
     xx = np.arange(len(pattern_rates[0])) * 0.01
     mask = (xx >= 10.5) & (xx < 22)
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     pd.DataFrame(compare_others).to_csv('plotting/data/persistent/averaged.csv', index=False)
 
 
-    pattern_rates, nstim = load_pr('hebb_smooth_rate', 'stimulus100ms_full')
+    pattern_rates, nstim = load_pr('hebb_smooth_rate', 'stimulus100ms_full', namespace=namespace)
 
     patr_list = []
     best_list = []

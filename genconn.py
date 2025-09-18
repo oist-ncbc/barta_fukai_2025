@@ -9,6 +9,7 @@ E→E edges, rescales by pattern participation, and then writes the connectivity
 """
 
 import numpy as np
+import os
 from tqdm import tqdm
 from itertools import combinations, product
 import argparse
@@ -16,7 +17,7 @@ import yaml
 import h5py
 from scipy.sparse import csr_array
 
-from utils import create_weight_dataset
+from utils import *
 
 
 def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True,
@@ -214,8 +215,7 @@ if __name__ == '__main__':
     parser.add_argument('--ee_sparse', type=float, default=0.05)
     parser.add_argument('--i_sparse', type=float, default=0.1)
     parser.add_argument('--i_factor', type=float, default=1)
-    parser.add_argument('--folder', type=str, default='lognormal')
-    parser.add_argument('--name', type=str, default='')
+    parser.add_argument('--namespace', type=str, required=True)
     parser.add_argument('--var', type=float, default=0.5)
     parser.add_argument('--spread', type=float, default=0)
 
@@ -247,9 +247,11 @@ if __name__ == '__main__':
     with open('config/server_config.yaml') as f:
         server_config = yaml.safe_load(f)
 
-    data_path = f"{server_config['data_path']}"
+    folder_path = data_path(args.namespace)
 
-    output_filename = f'{data_path}/{args.folder}/init{args.patterns}.h5'
+    create_directory(folder_path)
+
+    output_filename = f'{folder_path}/init{args.patterns}.h5'
 
     # Write connectivity to HDF5 in COO form per block (EE, IE, II, EI)
     with h5py.File(output_filename, "w") as h5f:  # Open file in append mode

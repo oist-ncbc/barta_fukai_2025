@@ -10,8 +10,10 @@ from eigenvalues import get_W
 
 
 if __name__ == '__main__':
+    namespace = 'lognormal'
+
     for npat in tqdm([800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000]):
-        patterns = load_patterns(npat)
+        patterns = load_patterns(npat, namespace=namespace)
         dense_patterns = patterns.dense()
         rand_patterns = patterns.randomize().dense()
 
@@ -21,9 +23,9 @@ if __name__ == '__main__':
 
         for system in ['hebb','hebb_smooth_rate', 'rate','uniform']:
             if system != 'uniform':
-                W = get_W(system=system, npat=npat, exc_vals=False)
+                W = get_W(system=system, npat=npat, exc_vals=False, namespace=namespace)
             else:
-                W = get_W(system='rate', npat=npat, exc_vals=False)
+                W = get_W(system='rate', npat=npat, exc_vals=False, namespace=namespace)
                 W[:8000,8000:] = (W[:8000,8000:] > 0).astype(float) * 0.5
 
             entropies[system] = []
@@ -53,11 +55,11 @@ if __name__ == '__main__':
     ass_diff = {}
     npat = 1000
 
-    patterns = load_patterns(npat)
+    patterns = load_patterns(npat, namespace=namespace)
     dense_patterns = patterns.dense()
 
     for system in ['hebb','hebb_smooth_rate','rate']:
-        W = get_W(system=system, npat=npat, exc_vals=False)
+        W = get_W(system=system, npat=npat, exc_vals=False, namespace=namespace)
 
         inhibs = dense_patterns @ (W[:8000,8000:] @ (W[8000:,:8000] @ dense_patterns.T)) / dense_patterns.sum(axis=1)
         # i-th column: how i-th assembly affects other assemblies

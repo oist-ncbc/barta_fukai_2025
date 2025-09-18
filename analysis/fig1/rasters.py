@@ -9,8 +9,8 @@ from analysis import get_spike_counts
 from eigenvalues import get_W
 
 
-def load_spikes(system, npat, start, end):
-    folder = f"{data_path()}/lognormal"
+def load_spikes(system, npat, start, end, namespace):
+    folder = data_path(namespace)
     filename = f"{folder}/{system}_spontaneous{npat}.h5"
 
     with h5py.File(filename, "r") as h5f:
@@ -27,8 +27,9 @@ def load_spikes(system, npat, start, end):
 
 
 if __name__ == '__main__':
+    namespace = 'lognormal'
     for system in tqdm(['rate','hebb_smooth_rate','hebb']):
-        spikes_exc, spikes_inh = load_spikes(system, 1000, 0, 20)
+        spikes_exc, spikes_inh = load_spikes(system, 1000, 0, 20, namespace)
 
         np.savetxt(f'plotting/data/rasters/{system}_excitatory.csv', spikes_exc)
         np.savetxt(f'plotting/data/rasters/{system}_inhibitory.csv', spikes_inh)
