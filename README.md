@@ -32,8 +32,7 @@ The workflow includes generating network connectivity, running spiking simulatio
 
 ## Workflow
 
-The following steps reproduce a typical experiment with **1000 memory assemblies**.
-Adjust the number of assemblies with `--patterns` as needed.
+The following steps reproduce a typical experiment with **1000 memory assemblies** and **fLHP** plasticity rule.
 
 ### 1. Generate connectivity matrix
 
@@ -47,7 +46,7 @@ python src/genconn.py --patterns 1000
 
 ### 2. Train the network with fLHP inhibitory plasticity
 
-Run training for **2000 s** with the Vogels & Sprekeler rule (`fLHP`).
+Run training for **2000 s** with the fLHP rule.
 
 ```bash
 python src/simulation.py \
@@ -141,6 +140,5 @@ python src/linear_sensitivity.py \
 * Configurations are organized under `config/systems/` (network setup) and `config/runtypes/` (simulation protocols).
 * The `analysis/` folder contains scripts to process the raw data
 * The `plotting/` folder contains scripts to process the generate the figures used in the manuscript from the analyzed data.
-* Figures and further analyses (e.g., eigenvalue spectra, replay diversity) can be generated using the analysis scripts in this repository.
 
 ---
