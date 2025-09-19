@@ -37,13 +37,13 @@ def overlap_panel(ax, npat=1000):
 
     ax.scatter(xx[~mask], patdev[order][~mask], s=5, color='black')
     ax.scatter(xx[mask], patdev[order][mask], s=5, color='red')
-    ax.axvspan(0, patsize, color='red', alpha=0.1)
+    ax.axvspan(0, patsize, color='red', alpha=0.1, lw=0)
     ax.set_xlim(-1, 120)
 
     ax2 = ax.twinx()
-    ax2.plot(np.cumsum(~mask[:patsize]) / patsize, color=contamination_color)
-    ax2.plot([patsize,120], [np.sum(~mask[:patsize]) / patsize]*2, linestyle='dotted', color=contamination_color)
-    ax2.set_ylim(0, 1)
+    ax2.plot(1 - np.cumsum(~mask[:patsize]) / patsize, color=contamination_color)
+    ax2.plot([patsize,120], [np.sum(mask[:patsize]) / patsize]*2, linestyle='dotted', color=contamination_color, clip_on=False)
+    ax2.set_ylim(0, 1.01)
 
     for label in ax2.get_yticklabels():
         label.set_color(contamination_color)
@@ -196,7 +196,7 @@ if __name__ == '__main__':
 
     ax5, ax51 = overlap_panel(ax5)
     ax5.set_ylabel('rate derivative (Hz/s)')
-    ax51.set_ylabel('contamination', color=contamination_color)
+    ax51.set_ylabel('overlap', color=contamination_color)
     ax5.set_xlabel('ordered neuron index')
     despine_ax(ax5, 't')
     despine_ax(ax51, 't')
@@ -211,7 +211,7 @@ if __name__ == '__main__':
         ax6.hist(overlap_stats[system], bins=bins, color=rule_color(system), label=rule_name(system), **hist_params)
 
     # ax6.set_xlabel('assembly contamination')
-    ax6.set_xlabel('contamination')
+    ax6.set_xlabel('overlap')
     ax6.set_ylabel('density')
     ax6.legend(loc=(0.3, 0.8))
     despine_ax(ax6, 'tr')
