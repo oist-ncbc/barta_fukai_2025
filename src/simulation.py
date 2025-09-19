@@ -1,17 +1,14 @@
 import argparse
 import yaml
-import pickle
 from pandas import read_csv
 import h5py
 import numpy as np
 
-from network_ch import run_network
+from src.network_ch import run_network
 from utils import load_connectivity, load_patterns, create_stim_tuples
 
 
 if __name__ == '__main__':
-    default_neuron = 'config/neurons/basic.yaml'
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--system', type=str, required=True)
@@ -45,7 +42,7 @@ if __name__ == '__main__':
         src.copy("/connectivity", dest)  # Copies to the root of destination
 
     # connectivity = load_connectivity(output_file)
-    connectivity = load_connectivity(system['name'], run['name'], npat=args.patterns)
+    connectivity = load_connectivity(system['name'], run['name'], npat=args.patterns, namespace=args.namespace)
 
     if type(system['target_rate']) == str:
         target_rate = np.loadtxt(f"config/rates/{system['target_rate']}_{args.patterns}.csv")
@@ -53,7 +50,7 @@ if __name__ == '__main__':
         target_rate = system['target_rate']
 
     if run['stimulus'] is not None:
-        patterns = load_patterns(npat=args.patterns)
+        patterns = load_patterns(npat=args.patterns, namespace=args.namespace)
         print(run['stimulus'])
 
         if run['run']['simulation_time'] == 'full':
