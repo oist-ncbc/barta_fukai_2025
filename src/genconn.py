@@ -213,7 +213,9 @@ if __name__ == '__main__':
     parser.add_argument('--circular', action='store_true')
     parser.add_argument('--fix_size', action='store_true')
     parser.add_argument('--ee_sparse', type=float, default=0.05)
-    parser.add_argument('--i_sparse', type=float, default=0.1)
+    parser.add_argument('--ii_sparse', type=float, default=0.1)
+    parser.add_argument('--ei_sparse', type=float, default=0.1)
+    parser.add_argument('--ie_sparse', type=float, default=0.1)
     parser.add_argument('--i_factor', type=float, default=1)
     parser.add_argument('--namespace', type=str, default='lognormal')
     parser.add_argument('--var', type=float, default=0.5)
@@ -223,8 +225,8 @@ if __name__ == '__main__':
 
     N_exc = args.nexc
 
-    # Block sparsities: (E→E, I→E, I→I, E→I)
-    network_sparsity = (args.ee_sparse, args.i_sparse, args.i_sparse, args.i_sparse)
+    # Block sparsities: (E←E, I←E, I←I, E←I)
+    network_sparsity = (args.ee_sparse, args.ie_sparse, args.ii_sparse, args.ei_sparse)
 
     # Build connectivity and patterns (dense)
     Z, patterns = genconn(N=args.neurons, N_exc=N_exc, P=args.patterns, f=args.pattern_sparsity,
