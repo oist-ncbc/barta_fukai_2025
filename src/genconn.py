@@ -20,8 +20,7 @@ from scipy.sparse import csr_array
 from utils import *
 
 
-def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True,
-            var_factor=0.5, fix_size=False, spread=0, seed=42, distribution='lognormal'):
+def genconn(N, N_exc, P, f, sparsity, weights, circular=False, rescale=True, fix_size=False, spread=0, seed=42, distribution='lognormal'):
     """Construct a dense weight matrix and embedded patterns.
 
     Generate connectivity by computing Hebbian co‑activations within E→E, then
@@ -127,8 +126,8 @@ def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True,
     # Extract surviving E→E raw scores and map to target distribution by rank
     weights_ee = (Z[:N_exc,:N_exc][Z[:N_exc,:N_exc] != 0])
 
-    E = 0.25
-    Var = E*var_factor
+    E = weights['ee_mean']
+    Var = weights['ee_var']
 
     sig = np.sqrt(np.log(Var/(E*E) + 1))
     mu = np.log(E) - sig**2 / 2
@@ -150,9 +149,10 @@ def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True,
         (0, N_exc, N_exc, N)       # E←I (rows E, cols I)
     ]
 
+
     for slice, sp_val in zip(slices, [sparse_ie, sparse_ii, sparse_ei]):
         Z_slice = Z[slice[0]:slice[1],slice[2]:slice[3]]
-        Z[slice[0]:slice[1],slice[2]:slice[3]] = (np.random.rand(*Z_slice.shape) < sp_val).astype(float) * E * i_factor
+        Z[slice[0]:slice[1],slice[2]:slice[3]] = (np.random.rand(*Z_slice.shape) < sp_val).astype(float)
 
     # Optional presynaptic column rescaling by pattern participation
     if rescale:
@@ -162,9 +162,9 @@ def genconn(N, N_exc, P, f, sparsity, i_factor, circular=False, rescale=True,
             Z[:,ii] = Z[:,ii] / factor
 
     # --- Final E/I block scaling --------------------------------------------
-    Z[N_exc:,N_exc:] = Z[N_exc:,N_exc:] * 6
-    Z[:N_exc,N_exc:] = Z[:N_exc,N_exc:] * 2
-    Z[N_exc:,:N_exc] = Z[N_exc:,:N_exc] * 2
+    Z[N_exc:,N_exc:] = Z[N_exc:,N_exc:] * weights['ii_hom']
+    Z[:N_exc,N_exc:] = Z[:N_exc,N_exc:] * weights['ei_hom']
+    Z[N_exc:,:N_exc] = Z[N_exc:,:N_exc] * weights['ie_hom']
 
     # if rescale:
     #     for i in tqdm(range(N_exc)):
@@ -205,33 +205,46 @@ def get_aux_prop(Z):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-n', '--neurons', type=int, default=10000)
-    parser.add_argument('--nexc', type=int, default=8000)
+    parser.add_argument('--config', type=str, default='config/networks/basic.yml')
     parser.add_argument('-p', '--patterns', type=int, default=2000)
-    parser.add_argument('--pattern_sparsity', type=float, default=0.01)
-    parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument('--circular', action='store_true')
-    parser.add_argument('--fix_size', action='store_true')
-    parser.add_argument('--ee_sparse', type=float, default=0.05)
-    parser.add_argument('--ii_sparse', type=float, default=0.1)
-    parser.add_argument('--ei_sparse', type=float, default=0.1)
-    parser.add_argument('--ie_sparse', type=float, default=0.1)
-    parser.add_argument('--i_factor', type=float, default=1)
     parser.add_argument('--namespace', type=str, default='lognormal')
-    parser.add_argument('--var', type=float, default=0.5)
-    parser.add_argument('--spread', type=float, default=0)
+    parser.add_argument('--seed', type=int, default=42)
+
+    # parser.add_argument('-n', '--neurons', type=int, default=10000)
+    # parser.add_argument('--nexc', type=int, default=8000)
+    
+    # parser.add_argument('--circular', action='store_true')
+    # parser.add_argument('--fix_size', action='store_true')
+    # parser.add_argument('--ee_sparse', type=float, default=0.05)
+    # parser.add_argument('--ii_sparse', type=float, default=0.1)
+    # parser.add_argument('--ei_sparse', type=float, default=0.1)
+    # parser.add_argument('--ie_sparse', type=float, default=0.1)
+    # parser.add_argument('--i_factor', type=float, default=1)
+    # parser.add_argument('--var', type=float, default=0.5)
+    # parser.add_argument('--spread', type=float, default=0)
 
     args = parser.parse_args()
 
-    N_exc = args.nexc
+    with open(args.config) as f:
+        config = yaml.safe_load(f)
+
+    N_exc = config['neurons']['exc']
+    N_inh = config['neurons']['inh']
+    N = N_inh + N_exc
+
+    ee_sparse = config['sparsity']['ee']
+    ei_sparse = config['sparsity']['ei']
+    ie_sparse = config['sparsity']['ie']
+    ii_sparse = config['sparsity']['ii']
 
     # Block sparsities: (E←E, I←E, I←I, E←I)
-    network_sparsity = (args.ee_sparse, args.ie_sparse, args.ii_sparse, args.ei_sparse)
+    network_sparsity = (ee_sparse, ie_sparse, ii_sparse, ei_sparse)
 
     # Build connectivity and patterns (dense)
-    Z, patterns = genconn(N=args.neurons, N_exc=N_exc, P=args.patterns, f=args.pattern_sparsity,
-                sparsity=network_sparsity, circular=args.circular, seed=args.seed, i_factor=args.i_factor,
-                          var_factor=args.var, fix_size=args.fix_size, spread=args.spread)
+    Z, patterns = genconn(N=N, N_exc=N_exc, P=args.patterns, f=config['assemblies']['pattern_sparsity'],
+                sparsity=network_sparsity, circular=config['circular'], seed=args.seed,
+                weights=config['weights'], fix_size=config['fix_size'], spread=config['assemblies']['spread'],
+                distribution=config['distribution'])
 
     # Auxiliary properties: per‑synapse delays and E‑neuron exc_alpha
     delays_tuple, exc_alpha = get_aux_prop(Z)
@@ -290,5 +303,5 @@ if __name__ == '__main__':
 
         # Attributes (counts)
         connectivity_group.attrs['N_exc'] = N_exc
-        connectivity_group.attrs['N_inh'] = args.neurons - N_exc
+        connectivity_group.attrs['N_inh'] = N_inh
         connectivity_group.attrs['N_patterns'] = args.patterns

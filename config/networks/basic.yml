@@ -1,0 +1,20 @@
+neurons:
+  exc: 8000
+  inh: 2000
+sparsity:
+  ee: 0.05  # E to E
+  ii: 0.1   # I to I
+  ei: 0.1   # I to E
+  ie: 0.1   # E to I
+weights:
+  ee_mean: 0.25
+  ee_var:  0.125
+  ii_hom:  1.5
+  ei_hom:  0.5
+  ie_hom:  0.5
+assemblies:
+  spread: 0
+  pattern_sparsity: 0.01
+circular: false
+fix_size: false
+distribution: lognormal

@@ -85,7 +85,10 @@ def load_connectivity(system: str, run: str, npat: int, namespace: str) -> dict:
         and metadata such as the number of excitatory and inhibitory neurons.
     """
     path_to_folder = data_path(namespace)
-    filename = f"{path_to_folder}/{system}_{run}{npat}.h5"
+    if run != '':
+        filename = f"{path_to_folder}/{system}_{run}{npat}.h5"
+    else:
+        filename = f"{path_to_folder}/{system}{npat}.h5"
 
     connectivity = {'weights': {}, 'delays': {}}
 

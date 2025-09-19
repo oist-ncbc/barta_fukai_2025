@@ -614,7 +614,7 @@ def run_network(
                     synapses[label].w = np.random.permutation(weights[label]['weights'])
                 else:
                     synapses[label].w = weights[label]['weights']
-
+                
                 synapses[label].delay = delays[label] * ms
 
     # ---------------------------------
