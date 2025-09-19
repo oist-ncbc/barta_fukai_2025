@@ -74,7 +74,7 @@ def get_spike_counts(spike_indices, spike_times, t_max, N=8000, dt=0.1, offset=0
     return bins_time, histdata
 
 
-def get_firing_rates(system, npat, namespace, run='spontaneous' interval=None, which='ei'):
+def get_firing_rates(system, npat, namespace, run='spontaneous', interval=None, which='ei'):
     """Compute per‑population firing rates from a spontaneous simulation file.
 
     Parameters
