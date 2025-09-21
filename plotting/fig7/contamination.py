@@ -180,12 +180,12 @@ if __name__ == '__main__':
     perturb_sc_responses = np.loadtxt('plotting/data/perturb_responses.csv')
     plot_responses(ax22, perturb_sc_responses)
 
-    folder = f"{data_path()}/lognormal"
+    folder_path = data_path('lognormal')
     
     bins = np.linspace(-0.2, 1.2, 30)
 
     for system in ['hebb','hebb_smooth_rate','rate']:
-        filename = f"{folder}/linear_approx/{system}1000.csv"
+        filename = f"{folder_path}/linear_approx/{system}1000.csv"
 
         data = pd.read_csv(filename, index_col=0)
         ax3.hist(data.loc['exc']['activation_exc'], bins=bins, color=rule_color(system), **hist_params)
@@ -224,4 +224,4 @@ if __name__ == '__main__':
     ax22.set_ylabel('firing\nrate (Hz)')
 
     # plt.tight_layout()
-    plt.savefig('plotting/img/contamination.png', dpi=300, bbox_inches='tight')
+    plt.savefig('img/contamination.png', dpi=300, bbox_inches='tight')

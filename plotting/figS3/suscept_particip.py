@@ -51,5 +51,5 @@ if __name__ == '__main__':
     #     ax.set_title(l, fontweight='bold', x=-0.15, y=0.95)
 
     fig.tight_layout()
-    plt.savefig('plotting/img/participation_dependence.png')
+    plt.savefig('img/participation_dependence.png')
 

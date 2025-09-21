@@ -31,4 +31,4 @@ if __name__ == '__main__':
 
     fig.tight_layout()
 
-    plt.savefig('plotting/img/linear_completion.png')
+    plt.savefig('img/linear_completion.png')

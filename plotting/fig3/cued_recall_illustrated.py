@@ -154,4 +154,4 @@ if __name__ == '__main__':
 
     fig.align_ylabels([right_axes[0][1][0], right_axes[1][1][0], right_axes[2][1][0]])
 
-    plt.savefig('plotting/img/cued_recall.svg', bbox_inches='tight', dpi=300, transparent=True)
+    plt.savefig('img/cued_recall.svg', bbox_inches='tight', dpi=300, transparent=True)

@@ -31,7 +31,7 @@ if __name__ == '__main__':
     ax_image = fig.add_subplot(outer_gs[0])
     ax_image.axis('off')
 
-    img = plt.imread(f'plotting/data/network_scheme.png')
+    img = plt.imread(f'plotting/fig1/network_scheme.png')
     ax_image.imshow(img)
     ax_image.set_title('A', loc='left', fontweight='bold', x=-0.11, y=0.9)
 
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     axes_middle[2].set_title('G', loc='left', fontweight='bold')
 
     rates = {
-        system: np.loadtxt(f'{root}/data/firing_rates/{system}{npat}.csv') for system in systems
+        system: np.loadtxt(f'plotting/data/firing_rates/{system}{npat}.csv') for system in systems
     }
 
     bins = np.linspace(-2, 2, 100)
@@ -139,10 +139,10 @@ if __name__ == '__main__':
     # despine_ax(axes[0])
 
     weights = {
-        system: np.loadtxt(f'{root}/data/ei_weights/{system}{npat}.csv') for system in systems
+        system: np.loadtxt(f'plotting/data/ei_weights/{system}{npat}.csv') for system in systems
     }
     totinhs = {
-        system: np.loadtxt(f'{root}/data/tot_inhib/{system}{npat}.csv') for system in systems
+        system: np.loadtxt(f'plotting/data/tot_inhib/{system}{npat}.csv') for system in systems
     }
 
     bins1 = np.linspace(0, 2, 50)
@@ -171,4 +171,4 @@ if __name__ == '__main__':
 
     axes_bottom[2].legend(loc=(0.35,0.6))
 
-    plt.savefig(f'{root}/img/intro.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'img/intro.png', dpi=300, bbox_inches='tight')

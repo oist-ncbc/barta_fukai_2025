@@ -52,4 +52,4 @@ if __name__ == '__main__':
     ax_sfa.set_xlim(0,2)
     ax_sfa.axvspan(0.5, 0.6, alpha=0.1, color='black')
 
-    plt.savefig('plotting/img/persistent.png', dpi=300)
+    plt.savefig('img/persistent.png', dpi=300)

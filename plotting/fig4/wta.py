@@ -24,12 +24,10 @@ if __name__ == '__main__':
     syslist = ['rate','hebb_smooth_rate','hebb']
     # markers = ['o', 'v', 's']
     # linestyles = ['solid','dashed','dotted']
-    
-    root = '/home/t/tomas-barta/StructuredInhibition/plotting'
 
     npat = 1000
-    npat_list = [800, 1000, 1200, 1400, 1600, 1800]
-    data = pd.read_csv(f'{root}/data/totweights/totweights_{npat}.csv', header=[0,1,2], index_col=0)
+    npat_list = [800, 1000, 1200, 1400, 1600, 1800, 2000]
+    data = pd.read_csv(f'plotting/data/totweights/totweights_{npat}.csv', header=[0,1,2], index_col=0)
     
     # gradual = pd.read_csv(f'{root}/data/gradual.csv', header=[0,1], index_col=0)
 
@@ -40,11 +38,9 @@ if __name__ == '__main__':
 
     outer_gs = GridSpec(2, 1, height_ratios=[1, 2], figure=fig)
 
-    fig, axes = plt.subplots(figsize=(8, 4), nrows=2, ncols=3)
-
     top_gs = outer_gs[0].subgridspec(1, 7, wspace=0.3, width_ratios=[1,1,1,0.4,1,1,1])
-    ax1 = axes[0,0]
-    ax2 = axes[0,1]
+    ax1 = fig.add_subplot(top_gs[1:3])
+    ax2 = fig.add_subplot(top_gs[4:6])
 
     with open(f'plotting/data/conductances.pkl', 'rb') as f:
         cov_data = pickle.load(f)
@@ -78,10 +74,12 @@ if __name__ == '__main__':
     despine_ax(ax1, 'tr')
     despine_ax(ax2, 'tr')
 
-    # bottom_gs = outer_gs[1].subgridspec(2, 6, wspace=0.9, hspace=0.6)
-    axes_scatters = axes[1]
+    bottom_gs = outer_gs[1].subgridspec(2, 6, wspace=0.9, hspace=0.6)
+    axes_scatters = np.array([
+        fig.add_subplot(bottom_gs[0,i*2:(i+1)*2]) for i in range(3)
+    ])
 
-    for ax, l in zip(axes_scatters, ['D','E','F']):
+    for ax, l in zip(axes_scatters, ['C','D','E']):
         despine_ax(ax, 'tr')
         ax.set_title(l, fontweight='bold', x=0.1, y=0.95)
 
@@ -99,9 +97,11 @@ if __name__ == '__main__':
 
     axes_scatters[0].set_ylabel('replay count')
 
-    axes_corrs = np.atleast_1d(axes[0,2])
+    axes_corrs = np.array([
+        fig.add_subplot(bottom_gs[1,1:3]), fig.add_subplot(bottom_gs[1,3:5])
+    ])
 
-    for ax, l in zip(axes_corrs, ['C','G']):
+    for ax, l in zip(axes_corrs, ['F','G']):
         despine_ax(ax, 'tr')
         ax.set_title(l, fontweight='bold', x=0.1, y=0.95)
 
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     correlations_excinh = {}
 
     for npat in npat_list:
-        data = pd.read_csv(f'{root}/data/totweights/totweights_{npat}.csv', header=[0,1,2], index_col=0)
+        data = pd.read_csv(f'plotting/data/totweights/totweights_{npat}.csv', header=[0,1,2], index_col=0)
         for system in syslist:
             x = data[system,str(npat),'tot_excit']
             y = data[system,str(npat),'act_counts']
@@ -140,11 +140,11 @@ if __name__ == '__main__':
         m = rule_marker(system)
         c = rule_color(system)
         axes_corrs[0].plot(ser_sper.loc[system], marker=m, color=c)
-        # axes_corrs[1].plot(ser_pear.loc[system], marker=m, color=c, label=rule_name(system))
+        axes_corrs[1].plot(ser_pear.loc[system], marker=m, color=c, label=rule_name(system))
         # print(stats.spearmanr(x[y > 0], y[y > 0]))
         # print(stats.pearsonr(x, np.clip(y, a_min=0, a_max=1)))
 
-    # axes_corrs[1].legend(loc=(0.6, 0.6))
+    axes_corrs[1].legend(loc=(0.6, 0.6))
 
     # letters = ['A','B','C','D','E','F']
 
@@ -156,12 +156,12 @@ if __name__ == '__main__':
     #     ax.set_xlabel('embedded assemblies')
 
     axes_corrs[0].set_ylabel('spearman r (r.c.>0)')
-    # axes_corrs[1].set_ylabel('pearson r (bin. r.c.)')
+    axes_corrs[1].set_ylabel('pearson r (bin. r.c.)')
 
     axes_corrs[0].set_xlabel('embedded assemblies')
-    # axes_corrs[1].set_xlabel('embedded assemblies')
+    axes_corrs[1].set_xlabel('embedded assemblies')
 
     fig.tight_layout()
-    plt.savefig(f'{root}/img/wta.png')
+    plt.savefig(f'img/wta.png')
 
 

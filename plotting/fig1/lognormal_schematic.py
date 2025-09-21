@@ -14,4 +14,4 @@ if __name__ == '__main__':
     ax.set_xticks([])
     ax.set_yticks([])
 
-    plt.savefig('plotting/img/lognorm.png', dpi=300)
+    plt.savefig('plotting/fig1/lognorm.png', dpi=300)

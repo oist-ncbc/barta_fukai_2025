@@ -140,4 +140,4 @@ if __name__ == '__main__':
 
 
     fig.tight_layout()
-    plt.savefig('plotting/img/eigenspectra.png', bbox_inches='tight')
+    plt.savefig('img/eigenspectra.png', bbox_inches='tight')

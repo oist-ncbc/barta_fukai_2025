@@ -9,14 +9,11 @@ from plotutils import *
 
 if __name__ == '__main__':
     syslist = ['hebb', 'hebb_smooth_rate', 'rate']
-    colors = ['C0','C1','C2']
-    markers = ['o', 'v', 's']
     linestyles = ['solid','dashed','dotted']
     
-    root = '/home/t/tomas-barta/StructuredInhibition/plotting'
-    activation_stats = pd.read_csv(f'{root}/data/activation_stats.csv', header=[0,1], index_col=0)
+    activation_stats = pd.read_csv(f'plotting/data/activation_stats.csv', header=[0,1], index_col=0)
     
-    gradual = pd.read_csv(f'{root}/data/gradual.csv', header=[0,1], index_col=0)
+    gradual = pd.read_csv(f'plotting/data/gradual.csv', header=[0,1], index_col=0)
 
     npat_list = activation_stats.index.values
     xx = gradual.index.values
@@ -58,7 +55,7 @@ if __name__ == '__main__':
     despine_ax(ax_00a, 'trb')
     despine_ax(ax_00b, 'tr')
 
-    with open(f'{root}/data/iais.pkl', 'rb') as f:
+    with open(f'plotting/data/iais.pkl', 'rb') as f:
         inter_event_intervals = pickle.load(f)
 
     bins = np.linspace(0, 80, 15)
@@ -110,6 +107,6 @@ if __name__ == '__main__':
     fig.align_ylabels([ax_02, ax_12])
 
     # fig.tight_layout()
-    plt.savefig(f'{root}/img/replay.png', bbox_inches='tight')
+    plt.savefig(f'img/replay.png', bbox_inches='tight')
 
 
